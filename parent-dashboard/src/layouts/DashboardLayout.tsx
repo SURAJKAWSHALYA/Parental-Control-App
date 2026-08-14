@@ -85,9 +85,10 @@ const DashboardLayout = () => {
           sidebarOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
-        <div className="flex items-center justify-center h-16 border-b border-neutral-800">
-          <h1 className="text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-500">
-            Family Safety
+        <div className="flex items-center justify-center h-16 border-b border-neutral-800 gap-3">
+          <img src="/logo.png" alt="SafeNest Logo" className="w-8 h-8 rounded-lg shadow-sm" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+          <h1 className="text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-indigo-500">
+            SafeNest
           </h1>
         </div>
         
