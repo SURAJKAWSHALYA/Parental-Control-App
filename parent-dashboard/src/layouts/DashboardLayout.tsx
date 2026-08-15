@@ -79,14 +79,14 @@ const DashboardLayout = () => {
           sidebarOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
-        <div className="flex items-center justify-center h-16 border-b border-neutral-800 gap-3">
-          <img src="/logo.png" alt="SafeNest Logo" className="w-8 h-8 rounded-lg shadow-sm" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
-          <h1 className="text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-indigo-500">
+        <div className="flex items-center justify-center h-20 border-b border-neutral-800 gap-3">
+          <img src="/logo.png" alt="SafeNest Logo" className="h-10 w-auto max-w-[80px] object-contain drop-shadow-md" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+          <h1 className="text-2xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-indigo-500 tracking-tight">
             SafeNest
           </h1>
         </div>
         
-        <div className="overflow-y-auto h-[calc(100vh-4rem)] pb-4">
+        <div className="overflow-y-auto h-[calc(100vh-5rem)] pb-4">
           <nav className="px-4 mt-6 space-y-1">
             {navItems.map((item) => {
               const isActive = location.pathname === item.path || (item.path !== '/' && location.pathname.startsWith(item.path));
