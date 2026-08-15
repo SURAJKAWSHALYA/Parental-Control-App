@@ -1,130 +1,136 @@
+import React, { useState, useEffect } from 'react';
 import { Users, Smartphone, ShieldAlert, Clock, Activity, Loader2 } from 'lucide-react';
-import { Link } from 'react-router-dom';
-import { useState, useEffect } from 'react';
+import { SummaryCard } from '../components/cards/SummaryCard';
+import { ChartCard } from '../components/cards/ChartCard';
+import { FamilyInsights } from '../components/FamilyInsights';
+import { FamilyActivityFeed } from '../components/FamilyActivityFeed';
+import { useSocket } from '../context/SocketContext';
 import api from '../services/api';
 
-const StatCard = ({ title, value, icon: Icon, colorClass, link }: any) => (
-  <Link to={link} className="bg-neutral-900 border border-neutral-800 rounded-2xl p-6 hover:border-neutral-700 transition-colors group">
-    <div className="flex items-center justify-between">
-      <div>
-        <p className="text-sm font-medium text-neutral-400 mb-1">{title}</p>
-        <h3 className="text-2xl font-bold text-white">{value}</h3>
-      </div>
-      <div className={`p-3 rounded-xl ${colorClass}`}>
-        <Icon className="w-6 h-6 text-white" />
-      </div>
-    </div>
-  </Link>
-);
-
 const Dashboard = () => {
-  const [stats, setStats] = useState({
-    children: 0,
-    devices: 0,
-    alerts: 0,
-    loading: true
+  const [summary, setSummary] = useState({
+    childrenCount: 0,
+    devicesCount: 0,
+    safetyAlerts: 0,
+    screenTime: '0m',
   });
+  const [trends, setTrends] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isTrendsLoading, setIsTrendsLoading] = useState(true);
+  const { socket } = useSocket();
+
+  const fetchSummary = async () => {
+    try {
+      const res = await api.get('/analytics/summary');
+      if (res.data.success) {
+        setSummary(res.data.data);
+      }
+    } catch (err) {
+      console.error('Error fetching summary', err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const fetchTrends = async () => {
+    try {
+      const res = await api.get('/analytics/trends?type=screen_time&days=7');
+      if (res.data.success) {
+        setTrends(res.data.data);
+      }
+    } catch (err) {
+      console.error('Error fetching trends', err);
+    } finally {
+      setIsTrendsLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchStats = async () => {
-      try {
-        const [childRes, deviceRes, alertRes] = await Promise.all([
-          api.get('/children'),
-          api.get('/devices'),
-          api.get('/alerts')
-        ]);
-        
-        setStats({
-          children: childRes.data.success ? childRes.data.data.length : 0,
-          devices: deviceRes.data.success ? deviceRes.data.data.length : 0,
-          alerts: alertRes.data.success ? alertRes.data.data.filter((a: any) => !a.isRead).length : 0,
-          loading: false
-        });
-      } catch (err) {
-        console.error(err);
-        setStats(prev => ({ ...prev, loading: false }));
-      }
-    };
-    fetchStats();
+    fetchSummary();
+    fetchTrends();
   }, []);
+
+  useEffect(() => {
+    if (!socket) return;
+    const handleUpdate = () => {
+      fetchSummary();
+      // Only refetch trends if necessary, but good to keep synced.
+    };
+    
+    // Listen to real-time events that would update the dashboard summary
+    socket.on('dashboard:updated', handleUpdate);
+    socket.on('analytics:updated', handleUpdate);
+    socket.on('activity:new', handleUpdate);
+    socket.on('alert:new', handleUpdate);
+    
+    return () => {
+      socket.off('dashboard:updated', handleUpdate);
+      socket.off('analytics:updated', handleUpdate);
+      socket.off('activity:new', handleUpdate);
+      socket.off('alert:new', handleUpdate);
+    };
+  }, [socket]);
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold text-white">Overview</h2>
-        <div className="bg-blue-500/10 text-blue-400 px-3 py-1 rounded-full text-sm font-medium border border-blue-500/20">
+        <h2 className="text-2xl font-bold text-white">Family Overview</h2>
+        <div className="bg-emerald-500/10 text-emerald-400 px-3 py-1 rounded-full text-sm font-medium border border-emerald-500/20">
           System Active
         </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <StatCard 
+        <SummaryCard 
           title="Children" 
-          value={stats.loading ? <Loader2 className="w-5 h-5 animate-spin" /> : stats.children} 
+          value={summary.childrenCount} 
           icon={Users} 
           colorClass="bg-blue-500 shadow-lg shadow-blue-500/20" 
           link="/children"
+          isLoading={isLoading}
         />
-        <StatCard 
-          title="Active Devices" 
-          value={stats.loading ? <Loader2 className="w-5 h-5 animate-spin" /> : stats.devices} 
+        <SummaryCard 
+          title="Online Devices" 
+          value={summary.devicesCount} 
           icon={Smartphone} 
           colorClass="bg-indigo-500 shadow-lg shadow-indigo-500/20" 
           link="/devices"
+          isLoading={isLoading}
         />
-        <StatCard 
-          title="Unread Alerts" 
-          value={stats.loading ? <Loader2 className="w-5 h-5 animate-spin" /> : stats.alerts} 
+        <SummaryCard 
+          title="Safety Alerts" 
+          value={summary.safetyAlerts} 
           icon={ShieldAlert} 
           colorClass="bg-red-500 shadow-lg shadow-red-500/20" 
           link="/alerts"
+          isLoading={isLoading}
         />
-        <StatCard 
-          title="View Activity" 
-          value="Log" 
-          icon={Activity} 
+        <SummaryCard 
+          title="Total Screen Time" 
+          value={summary.screenTime} 
+          icon={Clock} 
           colorClass="bg-emerald-500 shadow-lg shadow-emerald-500/20" 
-          link="/activity"
+          link="/screen-time"
+          isLoading={isLoading}
         />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8">
-        <div className="bg-neutral-900 border border-neutral-800 rounded-2xl p-6">
-          <h3 className="text-lg font-semibold text-white mb-4">Recent Activity</h3>
-          <div className="flex flex-col items-center justify-center py-12 text-center">
-            <div className="w-16 h-16 bg-neutral-800 rounded-full flex items-center justify-center mb-4">
-              <Clock className="w-8 h-8 text-neutral-500" />
-            </div>
-            <p className="text-neutral-300 font-medium">No activity yet</p>
-            <p className="text-neutral-500 text-sm mt-1">Connect a child's device to start monitoring.</p>
-          </div>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2 space-y-6">
+          <ChartCard 
+            title="Screen Time Trend (Last 7 Days)" 
+            data={trends} 
+            xKey="date" 
+            yKey="hours" 
+            type="area" 
+            color="#3b82f6" 
+            isLoading={isTrendsLoading}
+            valueFormatter={(val) => `${val}h`}
+          />
+          <FamilyInsights />
         </div>
-
-        <div className="bg-neutral-900 border border-neutral-800 rounded-2xl p-6">
-          <h3 className="text-lg font-semibold text-white mb-4">Quick Actions</h3>
-          <div className="space-y-3">
-            <Link to="/children" className="w-full flex items-center p-4 bg-neutral-950 border border-neutral-800 rounded-xl hover:border-neutral-700 transition-colors">
-              <div className="bg-blue-500/10 p-2 rounded-lg mr-4">
-                <Users className="w-5 h-5 text-blue-400" />
-              </div>
-              <div className="text-left">
-                <p className="font-medium text-white">Add a Child</p>
-                <p className="text-xs text-neutral-500">Create a profile for your child</p>
-              </div>
-            </Link>
-            
-            <Link to="/devices" className="w-full flex items-center p-4 bg-neutral-950 border border-neutral-800 rounded-xl hover:border-neutral-700 transition-colors">
-              <div className="bg-indigo-500/10 p-2 rounded-lg mr-4">
-                <Smartphone className="w-5 h-5 text-indigo-400" />
-              </div>
-              <div className="text-left flex-1">
-                <p className="font-medium text-white flex items-center justify-between">
-                  Manage Devices
-                </p>
-                <p className="text-xs text-neutral-500">View or pair new devices</p>
-              </div>
-            </Link>
-          </div>
+        <div className="lg:col-span-1 h-[800px]">
+          <FamilyActivityFeed />
         </div>
       </div>
     </div>

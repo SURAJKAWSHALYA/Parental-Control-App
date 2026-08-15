@@ -2,7 +2,6 @@ import { Request, Response } from 'express';
 import { MediaAsset } from '../models/MediaAsset';
 import { Conversation } from '../models/Conversation';
 import { StorageService } from '../services/storage.service';
-import { io } from '../server';
 import path from 'path';
 
 export const uploadMedia = async (req: Request, res: Response): Promise<void> => {

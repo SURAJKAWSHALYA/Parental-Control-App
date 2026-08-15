@@ -23,6 +23,7 @@ import {
 import { useState, useEffect } from 'react';
 import { useSocket } from '../context/SocketContext';
 import NotificationDropdown from '../components/NotificationDropdown';
+import { GlobalSearch } from '../components/GlobalSearch';
 
 const navItems = [
   { name: 'Dashboard', path: '/', icon: LayoutDashboard },
@@ -125,6 +126,10 @@ const DashboardLayout = () => {
             <h2 className="text-lg font-semibold text-neutral-100 hidden sm:block">
               {navItems.find(item => location.pathname === item.path || (item.path !== '/' && location.pathname.startsWith(item.path)))?.name || 'Dashboard'}
             </h2>
+          </div>
+          
+          <div className="flex-1 max-w-lg mx-4 hidden md:block">
+            <GlobalSearch />
           </div>
           
           <div className="flex items-center gap-4">

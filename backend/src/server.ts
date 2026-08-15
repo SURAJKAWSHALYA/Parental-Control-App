@@ -31,6 +31,8 @@ import communicationRoutes from './routes/communication.routes';
 import safetyRoutes from './routes/safety.routes';
 import chatRoutes from './routes/chat.routes';
 import mediaRoutes from './routes/media.routes';
+import analyticsRoutes from './routes/analytics.routes';
+import searchRoutes from './routes/search.routes';
 import { startDataRetentionCron } from './jobs/dataRetentionJob';
 
 dotenv.config();
@@ -79,6 +81,8 @@ app.use('/api/communication', communicationRoutes);
 app.use('/api/safety', safetyRoutes);
 app.use('/api/chat', chatRoutes);
 app.use('/api/media', mediaRoutes);
+app.use('/api/analytics', analyticsRoutes);
+app.use('/api/search', searchRoutes);
 
 // Global Error Handler
 app.use(errorHandler);
