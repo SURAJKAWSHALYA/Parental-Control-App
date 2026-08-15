@@ -4,6 +4,7 @@ import api from '../services/api';
 import { useSocket } from '../context/SocketContext';
 import { Smartphone, ShieldAlert, Settings, Trash2, ArrowLeft, Loader2, Clock, Globe, MapPin, CheckCircle2, RefreshCw, KeySquare } from 'lucide-react';
 import { StateWrapper } from '../components/cards/StateWrapper';
+import DeviceHealthCard from '../components/cards/DeviceHealthCard';
 
 interface Child {
   _id: string;
@@ -150,6 +151,7 @@ const ChildProfile = () => {
         )}
 
         {activeTab === 'Device' && (
+           <>
            <div className="bg-neutral-900 border border-neutral-800 rounded-2xl overflow-hidden max-w-2xl">
              <div className="px-6 py-5 border-b border-neutral-800 bg-neutral-950/50 flex justify-between items-center">
                <h3 className="text-lg font-semibold text-white flex items-center gap-2">
@@ -216,6 +218,13 @@ const ChildProfile = () => {
                )}
              </div>
            </div>
+           
+           {devices.map(device => (
+             <div key={`health-${device._id}`} className="mt-6">
+               <DeviceHealthCard deviceId={device._id} deviceName={device.deviceName} />
+             </div>
+           ))}
+           </>
         )}
 
         {activeTab !== 'Overview' && activeTab !== 'Device' && (

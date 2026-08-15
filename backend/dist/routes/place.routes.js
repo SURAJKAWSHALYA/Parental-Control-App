@@ -1,0 +1,12 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = require("express");
+const place_controller_1 = require("../controllers/place.controller");
+const auth_middleware_1 = require("../middleware/auth.middleware");
+const router = (0, express_1.Router)();
+router.use(auth_middleware_1.protect);
+router.get('/', place_controller_1.getPlaces);
+router.post('/', place_controller_1.createPlace);
+router.put('/:id', place_controller_1.updatePlace);
+router.delete('/:id', place_controller_1.deletePlace);
+exports.default = router;

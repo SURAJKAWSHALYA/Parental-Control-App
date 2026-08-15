@@ -5,6 +5,7 @@ import { Device } from '../models/Device';
 import { sendSuccess, sendError } from '../utils/response';
 import { AuthRequest } from '../middleware/auth.middleware';
 import { getIo } from '../sockets/socketHandler'; // We will need to export io or a helper
+import { AuditService } from '../services/AuditService';
 
 // Get all limits for a device
 export const getAppLimits = async (req: AuthRequest, res: Response) => {
@@ -57,6 +58,17 @@ export const setAppLimit = async (req: AuthRequest, res: Response) => {
     if (io) {
       io.to(`device_${deviceId}`).emit('app:limit:set', limit);
     }
+
+    await AuditService.logAction(
+      req.user.familyId,
+      req.user.id,
+      req.user.role,
+      'UPDATE_APP_LIMIT',
+      'AppLimit',
+      limit._id.toString(),
+      { packageName, dailyLimitMinutes, enabled },
+      req.ip
+    );
 
     sendSuccess(res, limit, 'App limit set successfully');
   } catch (error: any) {

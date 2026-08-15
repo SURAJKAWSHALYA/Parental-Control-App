@@ -4,6 +4,8 @@ import { NotificationRecord } from '../models/NotificationRecord';
 import { CallRecord } from '../models/CallRecord';
 import { SmsRecord } from '../models/SmsRecord';
 import { SafetyEvent } from '../models/SafetyEvent';
+import { ReportRequest } from '../models/ReportRequest';
+import { AuditLog } from '../models/AuditLog';
 
 export const runDataRetentionJob = async () => {
   console.log('Starting data retention job...');
@@ -50,6 +52,17 @@ export const runDataRetentionJob = async () => {
         await SafetyEvent.deleteMany({ deviceId: device._id, timestamp: { $lt: dateLimit } });
       }
     }
+
+    // 6. Reports and Temp Files
+    // Report requests expire automatically via TTL index, but we can also actively clean them if TTL is not working
+    const expiredReportsDate = new Date();
+    expiredReportsDate.setDate(expiredReportsDate.getDate() - 7);
+    await ReportRequest.deleteMany({ createdAt: { $lt: expiredReportsDate } });
+
+    // 7. Audit Logs older than 90 days (standard retention)
+    const auditLimitDate = new Date();
+    auditLimitDate.setDate(auditLimitDate.getDate() - 90);
+    await AuditLog.deleteMany({ timestamp: { $lt: auditLimitDate } });
     
     console.log('Data retention job completed successfully.');
   } catch (error) {

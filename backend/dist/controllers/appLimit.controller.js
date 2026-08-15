@@ -6,6 +6,7 @@ const Child_1 = require("../models/Child");
 const Device_1 = require("../models/Device");
 const response_1 = require("../utils/response");
 const socketHandler_1 = require("../sockets/socketHandler"); // We will need to export io or a helper
+const AuditService_1 = require("../services/AuditService");
 // Get all limits for a device
 const getAppLimits = async (req, res) => {
     try {
@@ -48,6 +49,7 @@ const setAppLimit = async (req, res) => {
         if (io) {
             io.to(`device_${deviceId}`).emit('app:limit:set', limit);
         }
+        await AuditService_1.AuditService.logAction(req.user.familyId, req.user.id, req.user.role, 'UPDATE_APP_LIMIT', 'AppLimit', limit._id.toString(), { packageName, dailyLimitMinutes, enabled }, req.ip);
         (0, response_1.sendSuccess)(res, limit, 'App limit set successfully');
     }
     catch (error) {

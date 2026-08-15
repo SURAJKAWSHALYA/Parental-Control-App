@@ -1,0 +1,15 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = require("express");
+const websiteRule_controller_1 = require("../controllers/websiteRule.controller");
+const auth_middleware_1 = require("../middleware/auth.middleware");
+const router = (0, express_1.Router)();
+router.use(auth_middleware_1.protect);
+router.get('/categories/available', websiteRule_controller_1.getAvailableCategories);
+router.get('/:deviceId/rules', websiteRule_controller_1.getWebsiteRules);
+router.post('/:deviceId/rules', websiteRule_controller_1.createWebsiteRule);
+router.put('/:deviceId/rules/:id', websiteRule_controller_1.updateWebsiteRule);
+router.delete('/:deviceId/rules/:id', websiteRule_controller_1.deleteWebsiteRule);
+router.get('/:deviceId/categories', websiteRule_controller_1.getWebsiteCategories);
+router.put('/:deviceId/categories/:category', websiteRule_controller_1.updateWebsiteCategory);
+exports.default = router;

@@ -73,10 +73,28 @@ const deviceSchema = new mongoose_1.Schema({
         type: String,
         required: true,
     },
-    permissions: {
-        usageAccess: { type: Boolean, default: true },
-        notifications: { type: Boolean, default: true },
-        location: { type: Boolean, default: true },
+    permissions: [{
+            feature: String,
+            status: {
+                type: String,
+                enum: ['ENABLED', 'DISABLED', 'NOT_GRANTED', 'NOT_SUPPORTED', 'REQUIRES_SETUP', 'UNKNOWN'],
+                default: 'UNKNOWN'
+            },
+            requiredPermission: String,
+            androidCapability: String,
+            lastChecked: { type: Date, default: Date.now },
+            lastSynchronized: { type: Date, default: Date.now },
+        }],
+    notificationSettings: {
+        enabled: { type: Boolean, default: true },
+        retentionDays: { type: Number, default: 7 },
+    },
+    retentionSettings: {
+        activityDays: { type: Number, default: 30 },
+        notificationDays: { type: Number, default: 30 },
+        callsDays: { type: Number, default: 30 },
+        smsDays: { type: Number, default: 30 },
+        safetyEventsDays: { type: Number, default: 90 },
     },
 }, {
     timestamps: true,

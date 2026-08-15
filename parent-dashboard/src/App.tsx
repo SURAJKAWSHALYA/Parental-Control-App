@@ -25,6 +25,7 @@ import Communication from './pages/Communication';
 import SafetySettings from './pages/SafetySettings';
 import FamilySafety from './pages/FamilySafety';
 import MediaGallery from './pages/MediaGallery';
+import Settings from './pages/Settings';
 
 const ProtectedRoute = ({ children }: { children: ReactNode }) => {
   const { user, loading } = useAuth();
@@ -72,7 +73,7 @@ function App() {
         <Route path="reports" element={<Reports />} />
         <Route path="media" element={<MediaGallery />} />
         <Route path="chat" element={<Placeholder title="Family Chat" />} />
-        <Route path="settings" element={<Placeholder title="Settings" />} />
+        <Route path="settings" element={<Settings />} />
       </Route>
       
       <Route path="*" element={<Navigate to="/" replace />} />

@@ -17,10 +17,19 @@ export const protect = async (req: AuthRequest, res: Response, next: NextFunctio
     try {
       token = req.headers.authorization.split(' ')[1];
       const decoded = jwt.verify(token, process.env.JWT_SECRET as string) as any;
-      req.user = await Parent.findById(decoded.id).select('-passwordHash');
-      if (!req.user) {
+      const parent = await Parent.findById(decoded.id).select('-passwordHash');
+      if (!parent) {
         return sendError(res, 'Not authorized, user not found', 'UNAUTHORIZED', 401);
       }
+      
+      // Inject familyId transparently. If no familyId exists, they are the OWNER, so their ID is the familyId
+      const userObj = parent.toObject();
+      req.user = {
+        ...userObj,
+        id: userObj._id, // Ensure .id works for legacy code
+        familyId: userObj.familyId || userObj._id
+      };
+      
       next();
     } catch (error) {
       return sendError(res, 'Not authorized, token failed', 'UNAUTHORIZED', 401);
@@ -51,4 +60,23 @@ export const protectDevice = async (req: AuthRequest, res: Response, next: NextF
   if (!token) {
     return sendError(res, 'Not authorized, no device token', 'UNAUTHORIZED', 401);
   }
+};
+
+export const requirePermission = (permission: string) => {
+  return (req: AuthRequest, res: Response, next: NextFunction) => {
+    if (!req.user) {
+      return sendError(res, 'Not authorized', 'UNAUTHORIZED', 401);
+    }
+    
+    // Owners bypass permission checks
+    if (req.user.role === 'OWNER') {
+      return next();
+    }
+    
+    if (req.user.permissions && req.user.permissions.includes(permission)) {
+      return next();
+    }
+    
+    return sendError(res, `Forbidden: requires ${permission} permission`, 'FORBIDDEN', 403);
+  };
 };

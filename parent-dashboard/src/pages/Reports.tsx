@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { BarChart3, MapPin, ShieldAlert, Navigation, Phone, MessageSquare, Bell, ShieldCheck } from 'lucide-react';
+import { BarChart3, MapPin, ShieldAlert, Navigation, Phone, MessageSquare, Bell, ShieldCheck, Download, FileText, Loader2, AlertCircle } from 'lucide-react';
 import api from '../services/api';
 
 const Reports = () => {
@@ -15,8 +15,17 @@ const Reports = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
+  // Async Report Generation State
+  const [reportHistory, setReportHistory] = useState<any[]>([]);
+  const [requesting, setRequesting] = useState(false);
+  const [reportType, setReportType] = useState('DAILY');
+  const [reportFormat, setReportFormat] = useState('PDF');
+
   useEffect(() => {
     fetchDevices();
+    fetchReportHistory();
+    const interval = setInterval(fetchReportHistory, 5000);
+    return () => clearInterval(interval);
   }, []);
 
   useEffect(() => {
@@ -37,6 +46,47 @@ const Reports = () => {
       }
     } catch (err) {
       setError('Failed to load devices');
+    }
+  };
+
+  const fetchReportHistory = async () => {
+    try {
+      const res = await api.get('/advanced-reports');
+      if (res.data.success) {
+        setReportHistory(res.data.data);
+      }
+    } catch (err) {
+      console.error('Failed to load report history');
+    }
+  };
+
+  const handleRequestReport = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setRequesting(true);
+    try {
+      await api.post('/advanced-reports/request', { type: reportType, format: reportFormat });
+      fetchReportHistory();
+    } catch (err) {
+      console.error('Failed to request report', err);
+      alert('Failed to request report');
+    } finally {
+      setRequesting(false);
+    }
+  };
+
+  const handleDownload = async (id: string, type: string, format: string) => {
+    try {
+      const res = await api.get(`/advanced-reports/${id}/download`, { responseType: 'blob' });
+      const url = window.URL.createObjectURL(new Blob([res.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `family-report-${type.toLowerCase()}.${format.toLowerCase()}`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    } catch (err) {
+      console.error('Download failed', err);
+      alert('Report is not ready or expired');
     }
   };
 
@@ -120,6 +170,74 @@ const Reports = () => {
             <option value="30">Last 30 Days</option>
           </select>
         </div>
+      </div>
+
+      {/* Report Generation Section */}
+      <div className="bg-neutral-900 rounded-xl p-6 border border-neutral-800 mb-8">
+        <h2 className="text-lg font-semibold text-white mb-4">Generate Document Report</h2>
+        <form onSubmit={handleRequestReport} className="flex flex-col sm:flex-row gap-4 items-end mb-6">
+          <div className="flex-1">
+            <label className="block text-sm font-medium text-neutral-400 mb-1">Report Type</label>
+            <select 
+              value={reportType} 
+              onChange={(e) => setReportType(e.target.value)}
+              className="w-full bg-neutral-800 border border-neutral-700 text-white rounded-lg px-4 py-2 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+            >
+              <option value="DAILY">Daily Family Safety Report</option>
+              <option value="WEEKLY">Weekly Summary</option>
+              <option value="MONTHLY">Monthly Overview</option>
+            </select>
+          </div>
+          <div className="w-40">
+            <label className="block text-sm font-medium text-neutral-400 mb-1">Format</label>
+            <select 
+              value={reportFormat} 
+              onChange={(e) => setReportFormat(e.target.value)}
+              className="w-full bg-neutral-800 border border-neutral-700 text-white rounded-lg px-4 py-2 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+            >
+              <option value="PDF">PDF Document</option>
+              <option value="CSV">CSV Data</option>
+            </select>
+          </div>
+          <button
+            type="submit"
+            disabled={requesting}
+            className="bg-indigo-600 text-white px-6 py-2 rounded-lg font-medium hover:bg-indigo-700 disabled:opacity-50 flex items-center gap-2 h-[42px]"
+          >
+            {requesting ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileText className="w-4 h-4" />}
+            Generate
+          </button>
+        </form>
+
+        {reportHistory.length > 0 && (
+          <div className="space-y-2">
+            <h3 className="text-sm font-medium text-neutral-400 mb-3">Recent Requests</h3>
+            {reportHistory.map((history) => (
+              <div key={history._id} className="flex justify-between items-center p-3 bg-neutral-800/50 rounded-lg border border-neutral-700/50">
+                <div className="flex items-center gap-3">
+                  <div className={`p-2 rounded-lg ${history.format === 'PDF' ? 'bg-red-500/10 text-red-500' : 'bg-emerald-500/10 text-emerald-500'}`}>
+                    <FileText className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <p className="text-white font-medium text-sm">{history.type} Report ({history.format})</p>
+                    <p className="text-xs text-neutral-500">{new Date(history.createdAt).toLocaleString()}</p>
+                  </div>
+                </div>
+                <div>
+                  {history.status === 'COMPLETED' ? (
+                    <button onClick={() => handleDownload(history._id, history.type, history.format)} className="text-indigo-400 hover:text-indigo-300 flex items-center gap-1 text-sm font-medium">
+                      <Download className="w-4 h-4" /> Download
+                    </button>
+                  ) : history.status === 'FAILED' ? (
+                    <span className="text-red-500 flex items-center gap-1 text-sm"><AlertCircle className="w-4 h-4" /> Failed</span>
+                  ) : (
+                    <span className="text-neutral-400 flex items-center gap-1 text-sm"><Loader2 className="w-4 h-4 animate-spin" /> Processing</span>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* General Activity Summary */}

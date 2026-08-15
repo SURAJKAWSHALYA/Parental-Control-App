@@ -39,6 +39,10 @@ const deleteDevice = async (req, res) => {
         const device = await Device_1.Device.findOneAndDelete({ _id: req.params.id, childId: { $in: childIds } });
         if (!device)
             return (0, response_1.sendError)(res, 'Device not found', 'NOT_FOUND', 404);
+        // Invalidate device credentials / Disconnect Socket.IO
+        const { getIo } = require('../sockets/socketHandler');
+        const io = getIo();
+        io.to(`device_${device.childId}`).disconnectSockets(true);
         (0, response_1.sendSuccess)(res, {}, 'Device deleted successfully');
     }
     catch (error) {

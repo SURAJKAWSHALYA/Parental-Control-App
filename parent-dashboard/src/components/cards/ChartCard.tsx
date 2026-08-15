@@ -53,7 +53,7 @@ export const ChartCard: React.FC<ChartCardProps> = ({
                 <Tooltip 
                   contentStyle={{ backgroundColor: '#171717', border: '1px solid #262626', borderRadius: '8px', color: '#fff' }}
                   itemStyle={{ color: '#fff' }}
-                  formatter={valueFormatter ? (value: number) => [valueFormatter(value), ''] : undefined}
+                  formatter={valueFormatter ? (value: any) => [valueFormatter(value), ''] : undefined}
                 />
                 <Area type="monotone" dataKey={yKey} stroke={color} fillOpacity={1} fill={`url(#color-${yKey})`} />
               </AreaChart>
@@ -66,7 +66,7 @@ export const ChartCard: React.FC<ChartCardProps> = ({
                   contentStyle={{ backgroundColor: '#171717', border: '1px solid #262626', borderRadius: '8px', color: '#fff' }}
                   itemStyle={{ color: '#fff' }}
                   cursor={{ fill: '#262626' }}
-                  formatter={valueFormatter ? (value: number) => [valueFormatter(value), ''] : undefined}
+                  formatter={valueFormatter ? (value: any) => [valueFormatter(value), ''] : undefined}
                 />
                 <Bar dataKey={yKey} fill={color} radius={[4, 4, 0, 0]} />
               </BarChart>

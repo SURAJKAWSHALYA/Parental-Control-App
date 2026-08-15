@@ -37,8 +37,12 @@ exports.Activity = void 0;
 const mongoose_1 = __importStar(require("mongoose"));
 const activitySchema = new mongoose_1.Schema({
     childId: { type: mongoose_1.Schema.Types.ObjectId, ref: 'Child', required: true },
-    deviceId: { type: mongoose_1.Schema.Types.ObjectId, ref: 'Device', required: true },
-    type: { type: String, required: true },
+    deviceId: { type: mongoose_1.Schema.Types.ObjectId, ref: 'Device' },
+    type: {
+        type: String,
+        enum: ['APP_INSTALL', 'APP_UNINSTALL', 'WEB_VISIT', 'LOCATION_CHANGE', 'DEVICE_OFFLINE', 'DEVICE_ONLINE', 'GEOFENCE_ENTER', 'GEOFENCE_EXIT', 'SAFETY', 'CHAT_SAFETY_EVENT', 'MEDIA_FLAGGED'],
+        required: true
+    },
     title: { type: String, required: true },
     description: { type: String, required: true },
     metadata: { type: mongoose_1.Schema.Types.Mixed },

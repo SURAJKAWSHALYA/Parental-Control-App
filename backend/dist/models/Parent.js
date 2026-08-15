@@ -52,6 +52,19 @@ const parentSchema = new mongoose_1.Schema({
         type: String,
         required: true,
     },
+    familyId: {
+        type: mongoose_1.Schema.Types.ObjectId,
+        ref: 'Parent'
+    },
+    role: {
+        type: String,
+        enum: ['OWNER', 'CO_PARENT'],
+        default: 'OWNER'
+    },
+    permissions: {
+        type: [String],
+        default: []
+    }
 }, {
     timestamps: true,
 });

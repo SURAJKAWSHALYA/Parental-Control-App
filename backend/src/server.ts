@@ -33,6 +33,10 @@ import chatRoutes from './routes/chat.routes';
 import mediaRoutes from './routes/media.routes';
 import analyticsRoutes from './routes/analytics.routes';
 import searchRoutes from './routes/search.routes';
+import deviceHealthRoutes from './routes/deviceHealth.routes';
+import familyRoutes from './routes/family.routes';
+import auditRoutes from './routes/audit.routes';
+import reportsRoutes from './routes/reports.routes';
 import { startDataRetentionCron } from './jobs/dataRetentionJob';
 
 dotenv.config();
@@ -83,6 +87,10 @@ app.use('/api/chat', chatRoutes);
 app.use('/api/media', mediaRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/search', searchRoutes);
+app.use('/api/device-health', deviceHealthRoutes);
+app.use('/api/family', familyRoutes);
+app.use('/api/audit', auditRoutes);
+app.use('/api/advanced-reports', reportsRoutes); // Use a distinct path from existing /api/reports
 
 // Global Error Handler
 app.use(errorHandler);

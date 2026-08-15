@@ -1,0 +1,13 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = require("express");
+const safety_controller_1 = require("../controllers/safety.controller");
+const auth_middleware_1 = require("../middleware/auth.middleware");
+const router = (0, express_1.Router)();
+router.use(auth_middleware_1.protect);
+router.get('/', safety_controller_1.getSafetyEvents);
+router.get('/overview', safety_controller_1.getSafetyOverview);
+router.put('/read-all', safety_controller_1.markAllRead);
+router.put('/:id', safety_controller_1.updateSafetyEventStatus);
+router.post('/:id/feedback', safety_controller_1.submitSafetyFeedback);
+exports.default = router;
