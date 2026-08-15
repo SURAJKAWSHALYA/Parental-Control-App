@@ -36,6 +36,9 @@ import searchRoutes from './routes/search.routes';
 import deviceHealthRoutes from './routes/deviceHealth.routes';
 import familyRoutes from './routes/family.routes';
 import auditRoutes from './routes/audit.routes';
+import intelligenceRoutes from './routes/intelligence.routes';
+import recommendationsRoutes from './routes/recommendations.routes';
+import alertRulesRoutes from './routes/alertRules.routes';
 import reportsRoutes from './routes/reports.routes';
 import { startDataRetentionCron } from './jobs/dataRetentionJob';
 
@@ -90,6 +93,9 @@ app.use('/api/search', searchRoutes);
 app.use('/api/device-health', deviceHealthRoutes);
 app.use('/api/family', familyRoutes);
 app.use('/api/audit', auditRoutes);
+app.use('/api/intelligence', intelligenceRoutes);
+app.use('/api/recommendations', recommendationsRoutes);
+app.use('/api/alert-rules', alertRulesRoutes);
 app.use('/api/advanced-reports', reportsRoutes); // Use a distinct path from existing /api/reports
 
 // Global Error Handler

@@ -40,6 +40,9 @@ const search_routes_1 = __importDefault(require("./routes/search.routes"));
 const deviceHealth_routes_1 = __importDefault(require("./routes/deviceHealth.routes"));
 const family_routes_1 = __importDefault(require("./routes/family.routes"));
 const audit_routes_1 = __importDefault(require("./routes/audit.routes"));
+const intelligence_routes_1 = __importDefault(require("./routes/intelligence.routes"));
+const recommendations_routes_1 = __importDefault(require("./routes/recommendations.routes"));
+const alertRules_routes_1 = __importDefault(require("./routes/alertRules.routes"));
 const reports_routes_1 = __importDefault(require("./routes/reports.routes"));
 const dataRetentionJob_1 = require("./jobs/dataRetentionJob");
 dotenv_1.default.config();
@@ -87,6 +90,9 @@ app.use('/api/search', search_routes_1.default);
 app.use('/api/device-health', deviceHealth_routes_1.default);
 app.use('/api/family', family_routes_1.default);
 app.use('/api/audit', audit_routes_1.default);
+app.use('/api/intelligence', intelligence_routes_1.default);
+app.use('/api/recommendations', recommendations_routes_1.default);
+app.use('/api/alert-rules', alertRules_routes_1.default);
 app.use('/api/advanced-reports', reports_routes_1.default); // Use a distinct path from existing /api/reports
 // Global Error Handler
 app.use(errorHandler_1.errorHandler);

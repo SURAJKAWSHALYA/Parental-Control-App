@@ -1,6 +1,20 @@
-import { Shield, Smartphone, MessageSquare, Image as ImageIcon, Bell } from 'lucide-react';
+import { Shield, Smartphone, MessageSquare, Image as ImageIcon, Bell, Loader2 } from 'lucide-react';
+import { AlertConfigForm } from '../components/forms/AlertConfigForm';
+import { useState, useEffect } from 'react';
+import api from '../services/api';
 
 export default function SafetySettings() {
+  const [children, setChildren] = useState<any[]>([]);
+  const [selectedChildId, setSelectedChildId] = useState<string>('');
+
+  useEffect(() => {
+    api.get('/children').then(res => {
+      const data = res.data.data;
+      setChildren(data);
+      if (data.length > 0) setSelectedChildId(data[0]._id);
+    });
+  }, []);
+
   return (
     <div className="space-y-6 max-w-4xl">
       <div>
@@ -132,7 +146,7 @@ export default function SafetySettings() {
         </div>
 
         {/* Notification Preview */}
-        <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-5 flex justify-between items-center">
+        <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-5 flex justify-between items-center mb-8">
           <div className="flex gap-4 items-start">
             <div className="p-3 bg-orange-500/10 rounded-lg shrink-0"><Bell className="w-6 h-6 text-orange-500" /></div>
             <div>
@@ -148,6 +162,32 @@ export default function SafetySettings() {
               <div className="w-11 h-6 bg-neutral-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-orange-500"></div>
             </label>
           </div>
+        </div>
+
+        {/* Advanced Alert Rules */}
+        <div className="pt-8 border-t border-neutral-800">
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-xl font-bold text-white">Advanced Alert Configuration</h2>
+            {children.length > 0 && (
+              <select
+                value={selectedChildId}
+                onChange={(e) => setSelectedChildId(e.target.value)}
+                className="bg-neutral-900 border border-neutral-700 text-white rounded-lg px-3 py-1.5 text-sm outline-none"
+              >
+                {children.map(child => (
+                  <option key={child._id} value={child._id}>{child.name}</option>
+                ))}
+              </select>
+            )}
+          </div>
+          
+          {selectedChildId ? (
+            <AlertConfigForm childId={selectedChildId} />
+          ) : (
+            <div className="flex justify-center items-center py-8">
+              <Loader2 className="w-6 h-6 text-neutral-500 animate-spin" />
+            </div>
+          )}
         </div>
 
       </div>

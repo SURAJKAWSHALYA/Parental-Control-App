@@ -5,6 +5,8 @@ import { useSocket } from '../context/SocketContext';
 import { Smartphone, ShieldAlert, Settings, Trash2, ArrowLeft, Loader2, Clock, Globe, MapPin, CheckCircle2, RefreshCw, KeySquare } from 'lucide-react';
 import { StateWrapper } from '../components/cards/StateWrapper';
 import DeviceHealthCard from '../components/cards/DeviceHealthCard';
+import { SafetyRiskCard } from '../components/cards/SafetyRiskCard';
+import { RecommendationsList } from '../components/cards/RecommendationsList';
 
 interface Child {
   _id: string;
@@ -20,6 +22,7 @@ const ChildProfile = () => {
   
   const [child, setChild] = useState<Child | null>(null);
   const [overview, setOverview] = useState<any>(null);
+  const [safetyIntelligence, setSafetyIntelligence] = useState<any>(null);
   const [devices, setDevices] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('Overview');
@@ -30,13 +33,15 @@ const ChildProfile = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [childRes, overviewRes, devicesRes] = await Promise.all([
+        const [childRes, overviewRes, devicesRes, intelligenceRes] = await Promise.all([
           api.get(`/children/${id}`),
           api.get(`/analytics/child-overview/${id}`),
-          api.get('/devices')
+          api.get('/devices'),
+          api.get(`/intelligence/${id}/score`)
         ]);
         setChild(childRes.data.data);
         setOverview(overviewRes.data.data);
+        setSafetyIntelligence(intelligenceRes.data.data);
         
         const allDevices = devicesRes.data.data as any[];
         setDevices(allDevices.filter(d => d.childId === id));
@@ -112,6 +117,7 @@ const ChildProfile = () => {
       {/* Content */}
       <div className="mt-6">
         {activeTab === 'Overview' && overview && (
+          <>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="bg-neutral-900 border border-neutral-800 rounded-2xl p-6">
               <div className="flex items-center justify-between mb-4">
@@ -148,6 +154,25 @@ const ChildProfile = () => {
               <p className="text-xl font-medium text-neutral-300">{overview.location}</p>
             </div>
           </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6">
+            <div className="md:col-span-1">
+              {safetyIntelligence && (
+                <SafetyRiskCard 
+                  score={safetyIntelligence.score} 
+                  level={safetyIntelligence.level} 
+                  factors={safetyIntelligence.factors} 
+                />
+              )}
+            </div>
+            <div className="md:col-span-2 bg-neutral-900 border border-neutral-800 rounded-2xl p-6 h-full flex flex-col">
+              <h3 className="text-lg font-semibold text-white mb-6">Smart Recommendations</h3>
+              <div className="flex-1 overflow-y-auto custom-scrollbar">
+                <RecommendationsList />
+              </div>
+            </div>
+          </div>
+        </>
         )}
 
         {activeTab === 'Device' && (
