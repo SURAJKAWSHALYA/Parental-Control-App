@@ -339,5 +339,18 @@ fun HomeScreen() {
             Text("Help", color = Color.Gray)
             Text("About", color = Color.Gray)
         }
+        
+        Spacer(modifier = Modifier.height(16.dp))
+        
+        Button(
+            onClick = {
+                context.startActivity(android.content.Intent(context, com.parentalcontrol.child.ui.FamilyChatActivity::class.java))
+            },
+            modifier = Modifier.fillMaxWidth().height(56.dp),
+            shape = RoundedCornerShape(12.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE8F5E9), contentColor = Color(0xFF2E7D32))
+        ) {
+            Text("Open Family Chat", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+        }
     }
 }

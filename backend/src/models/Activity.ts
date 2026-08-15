@@ -13,8 +13,12 @@ export interface IActivity extends Document {
 const activitySchema = new Schema<IActivity>(
   {
     childId: { type: Schema.Types.ObjectId, ref: 'Child', required: true },
-    deviceId: { type: Schema.Types.ObjectId, ref: 'Device', required: true },
-    type: { type: String, required: true },
+    deviceId: { type: Schema.Types.ObjectId, ref: 'Device' },
+    type: { 
+      type: String, 
+      enum: ['APP_INSTALL', 'APP_UNINSTALL', 'WEB_VISIT', 'LOCATION_CHANGE', 'DEVICE_OFFLINE', 'DEVICE_ONLINE', 'GEOFENCE_ENTER', 'GEOFENCE_EXIT', 'SAFETY', 'CHAT_SAFETY_EVENT', 'MEDIA_FLAGGED'],
+      required: true
+    },
     title: { type: String, required: true },
     description: { type: String, required: true },
     metadata: { type: Schema.Types.Mixed },

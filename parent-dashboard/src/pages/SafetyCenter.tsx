@@ -9,13 +9,17 @@ export default function SafetyCenter() {
   const [overview, setOverview] = useState({ CRITICAL: 0, HIGH: 0, MEDIUM: 0, LOW: 0 });
   const [devices, setDevices] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+  const [sourceFilter, setSourceFilter] = useState<string>('All');
   const { socket } = useSocket();
 
   useEffect(() => {
     fetchDevices();
     fetchOverview();
-    fetchEvents();
   }, []);
+
+  useEffect(() => {
+    fetchEvents();
+  }, [sourceFilter]);
 
   useEffect(() => {
     if (!socket) return;
@@ -66,9 +70,17 @@ export default function SafetyCenter() {
   const fetchEvents = async () => {
     setLoading(true);
     try {
-      const res = await api.get('/safety?limit=20');
+      let query = '/safety?limit=20';
+      if (sourceFilter === 'Family Chat') query += '&source=FAMILY_CHAT_MESSAGE';
+      if (sourceFilter === 'Images') query += '&source=FAMILY_CHAT_MEDIA'; // Need more fine-grained if separated
+      if (sourceFilter === 'Videos') query += '&source=FAMILY_CHAT_MEDIA';
+      const res = await api.get(query);
       if (res.data.success) {
-        setEvents(res.data.data);
+        let filtered = res.data.data;
+        if (sourceFilter === 'Family Chat') filtered = filtered.filter((e: any) => e.source === 'FAMILY_CHAT_MESSAGE');
+        if (sourceFilter === 'Images') filtered = filtered.filter((e: any) => e.source === 'FAMILY_CHAT_MEDIA' && e.evidenceType === 'IMAGE');
+        if (sourceFilter === 'Videos') filtered = filtered.filter((e: any) => e.source === 'FAMILY_CHAT_MEDIA' && e.evidenceType === 'VIDEO');
+        setEvents(filtered);
       }
     } catch (err) {
       console.error(err);
@@ -93,6 +105,21 @@ export default function SafetyCenter() {
           <p className="text-neutral-400 mt-1">
             Review safety detection alerts and manage device health.
           </p>
+        </div>
+        <div className="flex bg-neutral-800/50 p-1 rounded-xl border border-neutral-700/50 overflow-x-auto">
+          {(['All', 'Family Chat', 'Images', 'Videos'] as const).map(f => (
+            <button
+              key={f}
+              onClick={() => setSourceFilter(f)}
+              className={`px-3 py-1.5 whitespace-nowrap rounded-lg text-sm font-medium transition-colors ${
+                sourceFilter === f
+                  ? 'bg-neutral-700 text-white shadow-sm'
+                  : 'text-neutral-400 hover:text-neutral-200'
+              }`}
+            >
+              {f}
+            </button>
+          ))}
         </div>
       </div>
 

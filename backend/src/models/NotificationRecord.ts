@@ -23,7 +23,7 @@ const notificationRecordSchema = new Schema<INotificationRecord>(
     notificationText: { type: String },
     category: { 
       type: String, 
-      enum: ['Social', 'Messaging', 'Email', 'System', 'Other'],
+      enum: ['Social', 'Messaging', 'Email', 'System', 'Other', 'CHAT_MESSAGE'],
       default: 'Other'
     },
     isSensitive: { type: Boolean, default: false },

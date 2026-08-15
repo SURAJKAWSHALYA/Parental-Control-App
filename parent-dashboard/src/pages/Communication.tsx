@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
 import api from '../services/api';
 import { useSocket } from '../context/SocketContext';
-import { Phone, MessageSquare, Filter, PhoneIncoming, PhoneOutgoing, PhoneMissed, PhoneOff, ShieldAlert, AlertTriangle } from 'lucide-react';
+import { Phone, MessageSquare, Filter, PhoneIncoming, PhoneOutgoing, PhoneMissed, PhoneOff, ShieldAlert, AlertTriangle, MessageCircle } from 'lucide-react';
+import FamilyChat from '../components/FamilyChat';
 
 export default function Communication() {
-  const [activeTab, setActiveTab] = useState<'calls' | 'sms'>('calls');
+  const [activeTab, setActiveTab] = useState<'calls' | 'sms' | 'chat'>('calls');
   const [devices, setDevices] = useState<any[]>([]);
   const [selectedDevice, setSelectedDevice] = useState<string>('');
   const [filterDays, setFilterDays] = useState<string>('7');
@@ -196,8 +197,23 @@ export default function Communication() {
         >
           <MessageSquare className="w-4 h-4" /> SMS
         </button>
+        <button
+          onClick={() => setActiveTab('chat')}
+          className={`flex items-center gap-2 px-6 py-3 font-medium text-sm transition-colors border-b-2 ${
+            activeTab === 'chat' 
+              ? 'border-emerald-500 text-emerald-400' 
+              : 'border-transparent text-neutral-400 hover:text-neutral-200 hover:border-neutral-700'
+          }`}
+        >
+          <MessageCircle className="w-4 h-4" /> Family Chat
+        </button>
       </div>
 
+      {activeTab === 'chat' ? (
+        <div className="h-[600px]">
+          <FamilyChat selectedDevice={selectedDevice} deviceStatus={devices.find(d => d._id === selectedDevice)?.isOnline ? 'online' : 'offline'} />
+        </div>
+      ) : (
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         
         {/* Filters Panel */}
@@ -377,6 +393,7 @@ export default function Communication() {
         </div>
         
       </div>
+      )}
     </div>
   );
 }

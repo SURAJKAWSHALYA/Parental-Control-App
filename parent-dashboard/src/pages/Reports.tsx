@@ -6,6 +6,7 @@ const Reports = () => {
   const [report, setReport] = useState<any>(null);
   const [safetyReport, setSafetyReport] = useState<any>(null);
   const [commReport, setCommReport] = useState<any>(null);
+  const [familyCommReport, setFamilyCommReport] = useState<any>(null);
   
   const [devices, setDevices] = useState<any[]>([]);
   const [selectedDevice, setSelectedDevice] = useState<string>('');
@@ -47,15 +48,29 @@ const Reports = () => {
       if (selectedDevice) params.append('deviceId', selectedDevice);
       if (filterDays) params.append('days', filterDays);
 
-      const [weeklyRes, safetyRes, commRes] = await Promise.all([
+      const deviceObj = devices.find(d => d._id === deviceId);
+      const childId = deviceObj?.childId?._id || deviceObj?.childId;
+
+      const promises = [
         api.get(`/reports/weekly?${params.toString()}`),
         api.get(`/reports/${deviceId}/safety?days=${filterDays}`),
         api.get(`/reports/${deviceId}/communications?days=${filterDays}`)
-      ]);
+      ];
 
-      if (weeklyRes.data?.success) setReport(weeklyRes.data.data);
-      if (safetyRes.data?.success) setSafetyReport(safetyRes.data.data);
-      if (commRes.data?.success) setCommReport(commRes.data.data);
+      if (childId) {
+        promises.push(api.get(`/reports/${childId}/family-communication?days=${filterDays}`));
+      }
+
+      const res = await Promise.all(promises);
+      const weeklyRes = res[0];
+      const safetyRes = res[1];
+      const commRes = res[2];
+      const familyCommRes = res[3];
+
+      if (weeklyRes?.data?.success) setReport(weeklyRes.data.data);
+      if (safetyRes?.data?.success) setSafetyReport(safetyRes.data.data);
+      if (commRes?.data?.success) setCommReport(commRes.data.data);
+      if (familyCommRes?.data?.success) setFamilyCommReport(familyCommRes.data.data);
       
     } catch (err) {
       setError('Failed to load report data');
@@ -172,6 +187,38 @@ const Reports = () => {
               <div className="flex justify-between items-center p-3 bg-neutral-800/50 rounded-lg">
                 <span className="text-neutral-300 flex items-center gap-2"><MessageSquare className="w-4 h-4 text-indigo-500" /> SMS Messages</span>
                 <span className="text-white font-medium">{commReport.sms}</span>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Family Communication Summary */}
+        {familyCommReport && (
+          <div className="bg-neutral-900 rounded-xl p-6 border border-neutral-800 lg:col-span-2">
+            <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+              <MessageSquare className="w-5 h-5 text-pink-500" />
+              Family Chat Summary
+            </h2>
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+              <div className="p-4 bg-neutral-800/50 rounded-lg text-center border border-neutral-700/50">
+                <span className="block text-3xl font-bold text-white mb-1">{familyCommReport.messages}</span>
+                <span className="text-xs text-neutral-400 font-medium uppercase">Messages</span>
+              </div>
+              <div className="p-4 bg-neutral-800/50 rounded-lg text-center border border-neutral-700/50">
+                <span className="block text-3xl font-bold text-white mb-1">{familyCommReport.photos}</span>
+                <span className="text-xs text-neutral-400 font-medium uppercase">Photos</span>
+              </div>
+              <div className="p-4 bg-neutral-800/50 rounded-lg text-center border border-neutral-700/50">
+                <span className="block text-3xl font-bold text-white mb-1">{familyCommReport.videos}</span>
+                <span className="text-xs text-neutral-400 font-medium uppercase">Videos</span>
+              </div>
+              <div className="p-4 bg-neutral-800/50 rounded-lg text-center border border-neutral-700/50">
+                <span className="block text-3xl font-bold text-orange-400 mb-1">{familyCommReport.safetyEvents}</span>
+                <span className="text-xs text-neutral-400 font-medium uppercase">Safety Events</span>
+              </div>
+              <div className="p-4 bg-neutral-800/50 rounded-lg text-center border border-neutral-700/50">
+                <span className="block text-3xl font-bold text-red-500 mb-1">{familyCommReport.flaggedMedia}</span>
+                <span className="text-xs text-neutral-400 font-medium uppercase">Flagged Media</span>
               </div>
             </div>
           </div>

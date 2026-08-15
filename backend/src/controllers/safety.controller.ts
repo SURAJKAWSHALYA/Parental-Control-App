@@ -7,7 +7,7 @@ import { getIo } from '../sockets/socketHandler';
 export const getSafetyEvents = async (req: Request, res: Response) => {
   try {
     const parentId = req.user?.id;
-    const { childId, deviceId, status, severity, limit = '50' } = req.query;
+    const { childId, deviceId, status, severity, source, limit = '50' } = req.query;
 
     const filter: any = { parentId };
     
@@ -20,6 +20,7 @@ export const getSafetyEvents = async (req: Request, res: Response) => {
     if (deviceId) filter.deviceId = deviceId;
     if (status && status !== 'All') filter.status = status;
     if (severity && severity !== 'All') filter.severity = severity;
+    if (source && source !== 'All') filter.source = source;
 
     const events = await SafetyEvent.find(filter)
       .sort({ timestamp: -1 })

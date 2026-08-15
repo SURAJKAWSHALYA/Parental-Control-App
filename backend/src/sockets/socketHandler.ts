@@ -239,6 +239,52 @@ export const setupSockets = (io: Server) => {
         }
       }
     });
+
+    // Chat Events
+    socket.on('chat:typing', async (data) => {
+      const { conversationId, receiverId } = data;
+      if (socket.user?.role === 'parent') {
+         io.to(`device_${receiverId}`).emit('chat:typing', { conversationId });
+      } else if (socket.user?.role === 'device') {
+         const device = await Device.findById(socket.user.deviceId);
+         if (device) {
+           const child = await Child.findById(device.childId);
+           if (child) {
+             io.to(`parent_${child.parentId}`).emit('chat:typing', { conversationId, childId: child._id });
+           }
+         }
+      }
+    });
+
+    socket.on('chat:stopTyping', async (data) => {
+      const { conversationId, receiverId } = data;
+      if (socket.user?.role === 'parent') {
+         io.to(`device_${receiverId}`).emit('chat:stopTyping', { conversationId });
+      } else if (socket.user?.role === 'device') {
+         const device = await Device.findById(socket.user.deviceId);
+         if (device) {
+           const child = await Child.findById(device.childId);
+           if (child) {
+             io.to(`parent_${child.parentId}`).emit('chat:stopTyping', { conversationId, childId: child._id });
+           }
+         }
+      }
+    });
+
+    socket.on('chat:message:delivered', async (data) => {
+       const { messageId, conversationId, deviceId } = data;
+       if (socket.user?.role === 'device') {
+         const device = await Device.findById(socket.user.deviceId);
+         if (device) {
+           const child = await Child.findById(device.childId);
+           if (child) {
+             io.to(`parent_${child.parentId}`).emit('chat:message:delivered', { messageId, conversationId });
+           }
+         }
+       } else if (socket.user?.role === 'parent' && deviceId) {
+          io.to(`device_${deviceId}`).emit('chat:message:delivered', { messageId, conversationId });
+       }
+    });
   });
 };
 

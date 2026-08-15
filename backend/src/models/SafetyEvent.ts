@@ -4,7 +4,7 @@ export interface ISafetyEvent extends Document {
   parentId: mongoose.Types.ObjectId;
   childId: mongoose.Types.ObjectId;
   deviceId?: mongoose.Types.ObjectId;
-  source: 'Notification' | 'SMS' | 'Image' | 'Activity' | 'System';
+  source: 'Notification' | 'SMS' | 'Image' | 'Activity' | 'System' | 'FAMILY_CHAT_MEDIA' | 'FAMILY_CHAT_MESSAGE';
   category: string;
   severity: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
   confidence: number;
@@ -26,7 +26,7 @@ const safetyEventSchema = new Schema<ISafetyEvent>(
     deviceId: { type: Schema.Types.ObjectId, ref: 'Device' },
     source: { 
       type: String, 
-      enum: ['Notification', 'SMS', 'Image', 'Activity', 'System'],
+      enum: ['Notification', 'SMS', 'Image', 'Activity', 'System', 'FAMILY_CHAT_MEDIA', 'FAMILY_CHAT_MESSAGE'],
       required: true
     },
     category: { type: String, required: true },

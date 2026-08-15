@@ -10,6 +10,9 @@ import { SafetyEvent } from '../models/SafetyEvent';
 import { CallRecord } from '../models/CallRecord';
 import { SmsRecord } from '../models/SmsRecord';
 import { NotificationRecord } from '../models/NotificationRecord';
+import { Message } from '../models/Message';
+import { MediaAsset } from '../models/MediaAsset';
+import { Conversation } from '../models/Conversation';
 
 export const getWeeklyReport = async (req: AuthRequest, res: Response) => {
   try {
@@ -149,6 +152,58 @@ export const getCommunicationReport = async (req: AuthRequest, res: Response) =>
     };
 
     sendSuccess(res, summary, 'Communication report generated');
+  } catch (error: any) {
+    sendError(res, error.message);
+  }
+};
+
+export const getFamilyCommunicationReport = async (req: AuthRequest, res: Response) => {
+  try {
+    const parentId = req.user._id;
+    const { childId } = req.params;
+    const { days = '7' } = req.query;
+
+    const child = await Child.findOne({ _id: childId, parentId });
+    if (!child) return sendError(res, 'Child not found or unauthorized', 'UNAUTHORIZED', 403);
+
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - parseInt(days as string));
+
+    // Get conversation for child
+    const conversation = await Conversation.findOne({ parentId, childId });
+    if (!conversation) {
+      return sendSuccess(res, { messages: 0, photos: 0, videos: 0, safetyEvents: 0, flaggedMedia: 0 }, 'No conversation');
+    }
+
+    const conversationId = conversation._id;
+
+    // Messages query
+    const [messagesSent, messagesReceived, photos, videos, flaggedMessages, flaggedMedia, safetyEvents] = await Promise.all([
+      Message.countDocuments({ conversationId, senderType: 'Child', createdAt: { $gte: startDate } }),
+      Message.countDocuments({ conversationId, senderType: 'Parent', createdAt: { $gte: startDate } }),
+      MediaAsset.countDocuments({ conversationId, type: 'IMAGE', createdAt: { $gte: startDate } }),
+      MediaAsset.countDocuments({ conversationId, type: 'VIDEO', createdAt: { $gte: startDate } }),
+      Message.countDocuments({ conversationId, safetyStatus: 'FLAGGED', createdAt: { $gte: startDate } }),
+      MediaAsset.countDocuments({ conversationId, safetyStatus: 'FLAGGED', createdAt: { $gte: startDate } }),
+      SafetyEvent.countDocuments({ 
+        childId, 
+        source: { $in: ['FAMILY_CHAT_MESSAGE', 'FAMILY_CHAT_MEDIA'] },
+        timestamp: { $gte: startDate }
+      })
+    ]);
+
+    const summary = {
+      messages: messagesSent + messagesReceived,
+      messagesSent,
+      messagesReceived,
+      photos,
+      videos,
+      safetyEvents,
+      flaggedMessages,
+      flaggedMedia
+    };
+
+    sendSuccess(res, summary, 'Family Communication report generated');
   } catch (error: any) {
     sendError(res, error.message);
   }

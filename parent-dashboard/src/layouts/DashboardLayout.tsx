@@ -43,6 +43,7 @@ const navItems = [
   { name: 'Reports', path: '/reports', icon: LayoutDashboard },
   { name: 'Safety Settings', path: '/safety-settings', icon: ShieldCheck },
   { name: 'Family Chat', path: '/chat', icon: MessageSquare },
+  { name: 'Media', path: '/media', icon: ShieldAlert },
   { name: 'Settings', path: '/settings', icon: Settings },
 ];
 

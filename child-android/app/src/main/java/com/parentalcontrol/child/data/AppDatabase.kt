@@ -8,11 +8,13 @@ import androidx.room.RoomDatabase
 @Database(entities = [
     WebsiteRuleEntity::class, 
     WebsiteCategoryEntity::class,
-    LocationRecordEntity::class
-], version = 2, exportSchema = false)
+    LocationRecordEntity::class,
+    MessageEntity::class
+], version = 3, exportSchema = false)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun websiteRuleDao(): WebsiteRuleDao
     abstract fun locationRecordDao(): LocationRecordDao
+    abstract fun messageDao(): MessageDao
 
     companion object {
         @Volatile
@@ -24,7 +26,9 @@ abstract class AppDatabase : RoomDatabase() {
                     context.applicationContext,
                     AppDatabase::class.java,
                     "parental_control_database"
-                ).build()
+                )
+                .fallbackToDestructiveMigration()
+                .build()
                 INSTANCE = instance
                 instance
             }

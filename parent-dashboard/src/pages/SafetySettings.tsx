@@ -81,8 +81,7 @@ export default function SafetySettings() {
             <div>
               <h3 className="text-white font-medium mb-1">Image Safety Detection</h3>
               <p className="text-sm text-neutral-400 max-w-lg">
-                Scans images handled naturally by the device (e.g. screenshots or downloaded images) for explicit or graphic violence markers.
-                <span className="block mt-1 text-xs text-yellow-500">Warning: May consume additional device battery to run local heuristics.</span>
+                Scans explicitly shared images in Family Chat for explicit or graphic violence markers.
               </p>
             </div>
           </div>
@@ -90,6 +89,63 @@ export default function SafetySettings() {
             <label className="relative inline-flex items-center cursor-pointer">
               <input type="checkbox" className="sr-only peer" defaultChecked />
               <div className="w-11 h-6 bg-neutral-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-pink-500"></div>
+            </label>
+          </div>
+        </div>
+
+        {/* Video */}
+        <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-5 flex justify-between items-center">
+          <div className="flex gap-4 items-start">
+            <div className="p-3 bg-purple-500/10 rounded-lg shrink-0"><Shield className="w-6 h-6 text-purple-500" /></div>
+            <div>
+              <h3 className="text-white font-medium mb-1">Video Safety Detection</h3>
+              <p className="text-sm text-neutral-400 max-w-lg">
+                Scans explicitly shared videos in Family Chat by sampling frames for inappropriate content.
+              </p>
+            </div>
+          </div>
+          <div>
+            <label className="relative inline-flex items-center cursor-pointer">
+              <input type="checkbox" className="sr-only peer" defaultChecked />
+              <div className="w-11 h-6 bg-neutral-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-500"></div>
+            </label>
+          </div>
+        </div>
+
+        {/* Message Safety */}
+        <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-5 flex justify-between items-center">
+          <div className="flex gap-4 items-start">
+            <div className="p-3 bg-cyan-500/10 rounded-lg shrink-0"><MessageSquare className="w-6 h-6 text-cyan-500" /></div>
+            <div>
+              <h3 className="text-white font-medium mb-1">Message Safety Detection</h3>
+              <p className="text-sm text-neutral-400 max-w-lg">
+                Scans Family Chat messages for bullying, explicit content, or dangerous behavior.
+              </p>
+            </div>
+          </div>
+          <div>
+            <label className="relative inline-flex items-center cursor-pointer">
+              <input type="checkbox" className="sr-only peer" defaultChecked />
+              <div className="w-11 h-6 bg-neutral-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-cyan-500"></div>
+            </label>
+          </div>
+        </div>
+
+        {/* Notification Preview */}
+        <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-5 flex justify-between items-center">
+          <div className="flex gap-4 items-start">
+            <div className="p-3 bg-orange-500/10 rounded-lg shrink-0"><Bell className="w-6 h-6 text-orange-500" /></div>
+            <div>
+              <h3 className="text-white font-medium mb-1">Notification Preview</h3>
+              <p className="text-sm text-neutral-400 max-w-lg">
+                Allow raw text snippets or media previews inside parent dashboard notifications. Disable for strict privacy.
+              </p>
+            </div>
+          </div>
+          <div>
+            <label className="relative inline-flex items-center cursor-pointer">
+              <input type="checkbox" className="sr-only peer" defaultChecked />
+              <div className="w-11 h-6 bg-neutral-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-orange-500"></div>
             </label>
           </div>
         </div>

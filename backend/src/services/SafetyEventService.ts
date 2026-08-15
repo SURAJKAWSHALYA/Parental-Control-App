@@ -36,11 +36,33 @@ export class SafetyEventService {
     return this.handleClassification(parentId, childId, deviceId, 'Image', classification, title, 'Image processed', 'ImageMetadata', imageMetadata);
   }
 
+  static async processChatMessage(
+    parentId: mongoose.Types.ObjectId | string,
+    childId: mongoose.Types.ObjectId | string,
+    text: string,
+    messageId: mongoose.Types.ObjectId | string
+  ) {
+    const classification = await aiProvider.analyzeText(text);
+    const event = await this.handleClassification(parentId, childId, null, 'FAMILY_CHAT_MESSAGE', classification, 'Chat Message Flagged', text, 'TEXT', { messageId });
+    return { event, classification };
+  }
+
+  static async processChatMedia(
+    parentId: mongoose.Types.ObjectId | string,
+    childId: mongoose.Types.ObjectId | string,
+    mediaAssetId: mongoose.Types.ObjectId | string,
+    type: 'IMAGE' | 'VIDEO'
+  ) {
+    const classification = type === 'IMAGE' ? await aiProvider.analyzeImage({ id: mediaAssetId }) : { category: 'Safe', confidence: 100, severity: 'LOW' as any }; // Mock video analysis logic for prototype
+    const event = await this.handleClassification(parentId, childId, null, 'FAMILY_CHAT_MEDIA', classification, 'Chat Media Flagged', 'Media flagged in Family Chat', type, { mediaAssetId });
+    return { event, classification };
+  }
+
   private static async handleClassification(
     parentId: any,
     childId: any,
     deviceId: any,
-    source: 'Notification' | 'SMS' | 'Image' | 'Activity' | 'System',
+    source: 'Notification' | 'SMS' | 'Image' | 'Activity' | 'System' | 'FAMILY_CHAT_MEDIA' | 'FAMILY_CHAT_MESSAGE',
     classification: ISafetyClassification,
     title: string,
     description: string,
