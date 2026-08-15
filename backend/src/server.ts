@@ -22,6 +22,14 @@ import activityRoutes from './routes/activity.routes';
 import alertRoutes from './routes/alert.routes';
 import websiteRulesRoutes from './routes/websiteRules.routes';
 import locationRoutes from './routes/location.routes';
+import placeRoutes from './routes/place.routes';
+import geofenceRoutes from './routes/geofence.routes';
+import reportRoutes from './routes/report.routes';
+import permissionRoutes from './routes/permission.routes';
+import notificationRoutes from './routes/notification.routes';
+import communicationRoutes from './routes/communication.routes';
+import safetyRoutes from './routes/safety.routes';
+import { startDataRetentionCron } from './jobs/dataRetentionJob';
 
 dotenv.config();
 
@@ -60,6 +68,13 @@ app.use('/api/activity', activityRoutes);
 app.use('/api/alerts', alertRoutes);
 app.use('/api/websites', websiteRulesRoutes);
 app.use('/api/location', locationRoutes);
+app.use('/api/places', placeRoutes);
+app.use('/api/geofences', geofenceRoutes);
+app.use('/api/reports', reportRoutes);
+app.use('/api/permissions', permissionRoutes);
+app.use('/api/notifications', notificationRoutes);
+app.use('/api/communication', communicationRoutes);
+app.use('/api/safety', safetyRoutes);
 
 // Global Error Handler
 app.use(errorHandler);
@@ -68,6 +83,9 @@ app.use(errorHandler);
 setupSockets(io);
 
 const PORT = process.env.PORT || 5000;
+
+// Start background jobs
+startDataRetentionCron();
 
 server.listen(PORT, () => {
   console.log(`Server running in ${process.env.NODE_ENV || 'development'} mode on port ${PORT}`);

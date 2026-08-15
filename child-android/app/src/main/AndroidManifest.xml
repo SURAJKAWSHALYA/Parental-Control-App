@@ -51,6 +51,14 @@
             android:foregroundServiceType="location"
             android:exported="false" />
         
+        <receiver
+            android:name=".services.GeofenceBroadcastReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="com.google.android.gms.location.Geofence" />
+            </intent-filter>
+        </receiver>
+
         <!-- WorkManager service will be initialized automatically by Jetpack -->
     </application>
 </manifest>

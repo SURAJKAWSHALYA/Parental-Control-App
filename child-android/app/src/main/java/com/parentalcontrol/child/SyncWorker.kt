@@ -29,6 +29,11 @@ class SyncWorker(
                 // locationDao.deleteLocations(idsToRemove)
             }
             
+            // Simulating Geofence Sync
+            // val apiGeofences = geofenceService.getGeofences(deviceId)
+            // val geofenceManager = com.parentalcontrol.child.services.GeofenceManager(applicationContext)
+            // geofenceManager.registerGeofences(apiGeofences)
+            
             // Emitting sync ack
             // socket.emit("website:rules:sync", { "status": "success" })
             

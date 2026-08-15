@@ -18,6 +18,12 @@ import Activity from './pages/Activity';
 import Location from './pages/Location';
 import Placeholder from './pages/Placeholder';
 import ScreenTime from './pages/ScreenTime';
+import Reports from './pages/Reports';
+import SafetyCenter from './pages/SafetyCenter';
+import Notifications from './pages/Notifications';
+import Communication from './pages/Communication';
+import SafetySettings from './pages/SafetySettings';
+import FamilySafety from './pages/FamilySafety';
 
 const ProtectedRoute = ({ children }: { children: ReactNode }) => {
   const { user, loading } = useAuth();
@@ -53,9 +59,16 @@ function App() {
         <Route path="downtime" element={<Downtime />} />
         <Route path="websites" element={<Websites />} />
         <Route path="location" element={<Location />} />
+        <Route path="places" element={<Placeholder title="Places" />} />
+        <Route path="geofences" element={<Placeholder title="Geofences" />} />
+        <Route path="notifications" element={<Notifications />} />
+        <Route path="calls" element={<Communication />} />
+        <Route path="safety-center" element={<SafetyCenter />} />
+        <Route path="safety-settings" element={<SafetySettings />} />
+        <Route path="family-safety" element={<FamilySafety />} />
         <Route path="alerts" element={<Alerts />} />
         <Route path="activity" element={<Activity />} />
-        <Route path="reports" element={<Placeholder title="Reports" />} />
+        <Route path="reports" element={<Reports />} />
         <Route path="chat" element={<Placeholder title="Family Chat" />} />
         <Route path="settings" element={<Placeholder title="Settings" />} />
       </Route>

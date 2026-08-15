@@ -8,17 +8,21 @@ import {
   Gamepad2, 
   Globe, 
   MapPin, 
-  Bell, 
   Activity,
-  FileText,
   MessageSquare,
   Settings,
   LogOut,
-  Menu
+  Menu,
+  ShieldCheck,
+  Phone,
+  Map,
+  Crosshair,
+  Inbox,
+  ShieldAlert
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
-import api from '../services/api';
 import { useSocket } from '../context/SocketContext';
+import NotificationDropdown from '../components/NotificationDropdown';
 
 const navItems = [
   { name: 'Dashboard', path: '/', icon: LayoutDashboard },
@@ -26,11 +30,18 @@ const navItems = [
   { name: 'Devices', path: '/devices', icon: Smartphone },
   { name: 'Screen Time', path: '/screen-time', icon: Clock },
   { name: 'Apps', path: '/apps', icon: Gamepad2 },
+  { name: 'Downtime', path: '/downtime', icon: Clock },
   { name: 'Websites', path: '/websites', icon: Globe },
   { name: 'Location', path: '/location', icon: MapPin },
-  { name: 'Alerts', path: '/alerts', icon: Bell },
+  { name: 'Places', path: '/places', icon: Map },
+  { name: 'Geofences', path: '/geofences', icon: Crosshair },
+  { name: 'Notifications', path: '/notifications', icon: Inbox },
+  { name: 'Calls & SMS', path: '/calls', icon: Phone },
+  { name: 'Safety Center', path: '/safety-center', icon: ShieldCheck },
+  { name: 'Alerts', path: '/alerts', icon: ShieldAlert },
   { name: 'Activity', path: '/activity', icon: Activity },
-  { name: 'Reports', path: '/reports', icon: FileText },
+  { name: 'Reports', path: '/reports', icon: LayoutDashboard },
+  { name: 'Safety Settings', path: '/safety-settings', icon: ShieldCheck },
   { name: 'Family Chat', path: '/chat', icon: MessageSquare },
   { name: 'Settings', path: '/settings', icon: Settings },
 ];
@@ -39,35 +50,18 @@ const DashboardLayout = () => {
   const { user, logout } = useAuth();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [unreadCount, setUnreadCount] = useState(0);
   const { socket } = useSocket();
 
   useEffect(() => {
-    fetchUnreadAlerts();
-  }, []);
-
-  useEffect(() => {
     if (!socket) return;
-    const handleNewAlert = () => {
-      setUnreadCount(prev => prev + 1);
+    const handleNewNotification = () => {
+      // Notification handled by NotificationDropdown internally if needed
     };
-    socket.on('alert:new', handleNewAlert);
+    socket.on('alert:new', handleNewNotification);
     return () => {
-      socket.off('alert:new', handleNewAlert);
+      socket.off('alert:new', handleNewNotification);
     };
   }, [socket]);
-
-  const fetchUnreadAlerts = async () => {
-    try {
-      const res = await api.get('/alerts');
-      if (res.data.success) {
-        const unread = res.data.data.filter((a: any) => !a.isRead).length;
-        setUnreadCount(unread);
-      }
-    } catch (err) {
-      console.error('Failed to fetch alerts', err);
-    }
-  };
 
   return (
     <div className="flex h-screen bg-neutral-900 text-gray-100 font-sans">
@@ -133,12 +127,7 @@ const DashboardLayout = () => {
           </div>
           
           <div className="flex items-center gap-4">
-            <Link to="/alerts" className="relative p-2 text-neutral-400 hover:text-neutral-200 transition-colors">
-              <Bell className="w-5 h-5" />
-              {unreadCount > 0 && (
-                <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-neutral-900" />
-              )}
-            </Link>
+            <NotificationDropdown />
             
             <div className="hidden sm:flex flex-col items-end mr-2">
               <span className="text-sm font-medium text-neutral-200">{user?.fullName}</span>
