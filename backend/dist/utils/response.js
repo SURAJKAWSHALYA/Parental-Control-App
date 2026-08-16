@@ -9,11 +9,12 @@ const sendSuccess = (res, data, message = 'Operation successful', statusCode = 2
     });
 };
 exports.sendSuccess = sendSuccess;
-const sendError = (res, message = 'Something went wrong', errorCode = 'SERVER_ERROR', statusCode = 500) => {
+const sendError = (res, message = 'Something went wrong', errorCode = 'SERVER_ERROR', statusCode = 500, requestId) => {
     return res.status(statusCode).json({
         success: false,
         message,
         errorCode,
+        requestId,
     });
 };
 exports.sendError = sendError;

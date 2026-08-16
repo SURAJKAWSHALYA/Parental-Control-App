@@ -36,6 +36,12 @@ export const uploadMedia = async (req: Request, res: Response): Promise<void> =>
       return;
     }
 
+    const allowedMimeTypes = ['image/jpeg', 'image/png', 'image/webp', 'video/mp4', 'video/webm'];
+    if (!allowedMimeTypes.includes(file.mimetype)) {
+      res.status(400).json({ success: false, message: 'Invalid file type' });
+      return;
+    }
+
     const isVideo = file.mimetype.startsWith('video/');
     const type = isVideo ? 'VIDEO' : 'IMAGE';
     const extension = path.extname(file.originalname);
@@ -45,9 +51,9 @@ export const uploadMedia = async (req: Request, res: Response): Promise<void> =>
     
     // Create Media Asset
     const mediaAsset = await MediaAsset.create({
-      familyId: conversation.familyId,
+      familyId: conversation.parentId,
       conversationId: conversation._id,
-      uploaderId: req.user.userId,
+      uploaderId: req.user.id || req.user.deviceId,
       deviceId: req.user.deviceId || conversation.childId, // Mocking device ID context
       type,
       storageKey,
@@ -82,7 +88,18 @@ export const getMediaStream = async (req: Request, res: Response): Promise<void>
       return;
     }
 
-    // Optional: Verify family ownership here before streaming (using req.user info)
+    // Verify family ownership before streaming
+    const userId = (req.user.id || req.user.deviceId)?.toString();
+    const familyId = req.user.familyId?.toString();
+    
+    // Check if the user is the uploader, or part of the same family
+    const isOwner = mediaAsset.uploaderId.toString() === userId || 
+                    (familyId && mediaAsset.familyId.toString() === familyId);
+                    
+    if (!isOwner) {
+      res.status(403).json({ success: false, message: 'Not authorized to view this media' });
+      return;
+    }
 
     res.setHeader('Content-Type', mediaAsset.mimeType);
     
@@ -105,7 +122,7 @@ export const deleteMedia = async (req: Request, res: Response): Promise<void> =>
     }
 
     // Authorize deletion
-    if (mediaAsset.uploaderId.toString() !== req.user.userId.toString()) {
+    if (mediaAsset.uploaderId.toString() !== (req.user.id || req.user.deviceId)?.toString()) {
       res.status(403).json({ success: false, message: 'Not authorized to delete' });
       return;
     }
@@ -136,11 +153,12 @@ export const getMediaGallery = async (req: Request, res: Response): Promise<void
         if (conversation) {
           query.conversationId = conversation._id;
         } else {
-          return res.json({ success: true, data: [] });
+          res.json({ success: true, data: [] });
+          return;
         }
       }
     } else {
-      query = { uploaderId: req.user.userId };
+      query = { uploaderId: req.user.id || req.user.deviceId };
     }
 
     if (cursor) {

@@ -66,5 +66,6 @@ const safetyEventSchema = new mongoose_1.Schema({
     timestamps: true,
 });
 safetyEventSchema.index({ parentId: 1, timestamp: -1 });
+safetyEventSchema.index({ childId: 1, timestamp: -1 });
 safetyEventSchema.index({ childId: 1, status: 1 });
 exports.SafetyEvent = mongoose_1.default.model('SafetyEvent', safetyEventSchema);

@@ -69,7 +69,7 @@ export class AnalyticsService {
    */
   static async getFamilyInsights(parentId: string) {
     const pId = new mongoose.Types.ObjectId(parentId);
-    const children = await Child.find({ parentId: pId }).select('firstName lastName _id');
+    const children = await Child.find({ parentId: pId }).select('name _id');
 
     if (children.length === 0) return [];
 
@@ -104,7 +104,7 @@ export class AnalyticsService {
 
       insights.push({
         childId: child._id,
-        name: child.firstName,
+        name: child.name,
         screenTime: h > 0 ? `${h}h ${m}m` : `${m}m`,
         appsUsedCount: appsUsed.length,
         websitesBlocked: blockedWebsites,

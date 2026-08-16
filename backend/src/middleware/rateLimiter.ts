@@ -1,8 +1,11 @@
 import rateLimit from 'express-rate-limit';
 
+const isProd = process.env.NODE_ENV === 'production';
+
+// API global limiter - 15 minutes window
 export const apiLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 5000, // Limit each IP to 5000 requests per `window` for development
+  windowMs: 15 * 60 * 1000,
+  max: isProd ? 300 : 5000, // 300 in prod, 5000 in dev
   standardHeaders: true,
   legacyHeaders: false,
   message: {
@@ -12,14 +15,28 @@ export const apiLimiter = rateLimit({
   }
 });
 
+// Authentication limiter - 1 hour window
 export const authLimiter = rateLimit({
-  windowMs: 60 * 60 * 1000, // 1 hour
-  max: 5000, // Limit each IP to 5000 login/register requests per `window` for development
+  windowMs: 60 * 60 * 1000, 
+  max: isProd ? 10 : 5000, // 10 attempts per hour in prod, 5000 in dev
   standardHeaders: true,
   legacyHeaders: false,
   message: {
     success: false,
     message: 'Too many authentication attempts, please try again after an hour',
     errorCode: 'AUTH_RATE_LIMIT_EXCEEDED'
+  }
+});
+
+// Media upload limiter - 1 hour window
+export const mediaLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: isProd ? 50 : 5000, // max 50 uploads per hour per IP in prod
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    success: false,
+    message: 'Media upload quota exceeded, please try again later',
+    errorCode: 'MEDIA_RATE_LIMIT_EXCEEDED'
   }
 });

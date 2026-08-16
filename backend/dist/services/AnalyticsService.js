@@ -66,7 +66,7 @@ class AnalyticsService {
      */
     static async getFamilyInsights(parentId) {
         const pId = new mongoose_1.default.Types.ObjectId(parentId);
-        const children = await Child_1.Child.find({ parentId: pId }).select('firstName lastName _id');
+        const children = await Child_1.Child.find({ parentId: pId }).select('name _id');
         if (children.length === 0)
             return [];
         const startOfDay = new Date();
@@ -92,7 +92,7 @@ class AnalyticsService {
             const messages = await Message_1.Message.countDocuments({ senderId: childId, timestamp: { $gte: startOfDay } });
             insights.push({
                 childId: child._id,
-                name: child.firstName,
+                name: child.name,
                 screenTime: h > 0 ? `${h}h ${m}m` : `${m}m`,
                 appsUsedCount: appsUsed.length,
                 websitesBlocked: blockedWebsites,

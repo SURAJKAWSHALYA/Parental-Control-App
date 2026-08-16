@@ -6,7 +6,8 @@ export interface IActivity extends Document {
   type: string;
   title: string;
   description: string;
-  metadata: any;
+  metadata?: any;
+  isForeground?: boolean;
   timestamp: Date;
 }
 
@@ -22,10 +23,14 @@ const activitySchema = new Schema<IActivity>(
     title: { type: String, required: true },
     description: { type: String, required: true },
     metadata: { type: Schema.Types.Mixed },
-    timestamp: { type: Date, default: Date.now },
-  }
+    isForeground: { type: Boolean, default: true },
+    timestamp: { type: Date, default: Date.now }
+  },
+  { timestamps: true }
 );
 
+// Index for fetching recent activities per device rapidly
 activitySchema.index({ deviceId: 1, timestamp: -1 });
+activitySchema.index({ childId: 1, timestamp: -1 });
 
 export const Activity = mongoose.model<IActivity>('Activity', activitySchema);

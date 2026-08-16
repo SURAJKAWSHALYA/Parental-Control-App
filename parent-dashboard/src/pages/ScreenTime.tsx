@@ -153,9 +153,8 @@ const ScreenTime = () => {
   }));
 
   const selectedDevice = devices.find(d => d._id === selectedDeviceId);
-  // We'll mock permission check based on whether there's ANY history or online status. In real app, we'd have a flag on device model.
-  // We'll assume usage access is missing if appVersion exists (they connected) but zero history ever, but for the requirement, 
-  // we'll just check if there's no data at all. Actually, let's just add a permission check prompt if todayUsage is completely empty for a long time.
+  // We infer permission status based on data presence. In future phases, we will track this explicitly via a flag on the Device model.
+  // We'll prompt for permission check if todayUsage is completely empty.
   const isUsageEmpty = todayUsage.length === 0;
 
   return (

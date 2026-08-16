@@ -41,7 +41,7 @@ const AppManagement = () => {
 
     const handleUsageUpdated = (data: any) => {
       if (data.deviceId === selectedDeviceId) {
-        // Optimistically update usage if we get a real-time event (mocked from device)
+        // Optimistically update usage if we get a real-time event from the device
         fetchData(selectedDeviceId); 
       }
     };

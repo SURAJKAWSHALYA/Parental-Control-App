@@ -99,4 +99,7 @@ const deviceSchema = new mongoose_1.Schema({
 }, {
     timestamps: true,
 });
+// Compound indexes for rapid lookups by parent or child
+deviceSchema.index({ parentId: 1, childId: 1 });
+deviceSchema.index({ childId: 1, isOnline: 1 });
 exports.Device = mongoose_1.default.model('Device', deviceSchema);

@@ -11,6 +11,8 @@ export interface IMessage extends Document {
   replyToMessageId?: mongoose.Types.ObjectId;
   status: 'SENDING' | 'SENT' | 'DELIVERED' | 'READ' | 'FAILED';
   safetyStatus: 'SAFE' | 'REVIEW' | 'FLAGGED' | 'UNKNOWN';
+  flaggedCategory?: string;
+  deletedFor?: mongoose.Types.ObjectId[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -27,6 +29,8 @@ const messageSchema = new Schema<IMessage>(
     replyToMessageId: { type: Schema.Types.ObjectId, ref: 'Message' },
     status: { type: String, enum: ['SENDING', 'SENT', 'DELIVERED', 'READ', 'FAILED'], default: 'SENT' },
     safetyStatus: { type: String, enum: ['SAFE', 'REVIEW', 'FLAGGED', 'UNKNOWN'], default: 'UNKNOWN' },
+    flaggedCategory: { type: String },
+    deletedFor: [{ type: Schema.Types.ObjectId, ref: 'Parent' }]
   },
   { timestamps: true }
 );
@@ -34,5 +38,7 @@ const messageSchema = new Schema<IMessage>(
 messageSchema.index({ conversationId: 1, createdAt: -1 });
 messageSchema.index({ text: 'text' });
 messageSchema.index({ conversationId: 1, senderType: 1, safetyStatus: 1 });
+messageSchema.index({ conversationId: 1, deletedFor: 1 });
+messageSchema.index({ conversationId: 1, safetyStatus: 1 });
 
 export const Message = mongoose.model<IMessage>('Message', messageSchema);

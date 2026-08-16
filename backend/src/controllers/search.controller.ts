@@ -18,16 +18,16 @@ export const globalSearch = async (req: Request, res: Response) => {
     const pId = new mongoose.Types.ObjectId(parentId);
     const regex = new RegExp(q, 'i');
 
-    const results = [];
+    const results: any[] = [];
 
     // 1. Search Children
-    const children = await Child.find({ parentId: pId, $or: [{ firstName: regex }, { lastName: regex }] });
-    children.forEach(c => results.push({ type: 'child', id: c._id, title: `${c.firstName} ${c.lastName}`, subtitle: 'Child Profile', url: `/children/${c._id}` }));
+    const children = await Child.find({ parentId: pId, name: regex });
+    children.forEach(c => results.push({ type: 'child', id: c._id, title: c.name, subtitle: 'Child Profile', url: `/children/${c._id}` }));
     const childIds = children.length > 0 ? children.map(c => c._id) : (await Child.find({ parentId: pId }).select('_id')).map(c => c._id);
 
     // 2. Search Devices
-    const devices = await Device.find({ parentId: pId, $or: [{ name: regex }, { deviceModel: regex }] });
-    devices.forEach(d => results.push({ type: 'device', id: d._id, title: d.name, subtitle: d.deviceModel || 'Device', url: `/devices` }));
+    const devices = await Device.find({ childId: { $in: childIds }, $or: [{ deviceName: regex }, { deviceModel: regex }] });
+    devices.forEach(d => results.push({ type: 'device', id: d._id, title: d.deviceName, subtitle: d.deviceModel || 'Device', url: `/devices` }));
 
     // 3. Search Activity
     const activities = await Activity.find({ childId: { $in: childIds }, $or: [{ title: regex }, { description: regex }] }).limit(10).sort({ timestamp: -1 });
@@ -41,10 +41,10 @@ export const globalSearch = async (req: Request, res: Response) => {
     // For Family Chat, we might want to search text if the parent is part of the conversation. 
     // Just searching messages linked to parent or children
     const messages = await Message.find({ 
-      $or: [{ senderId: { $in: [pId, ...childIds] } }, { receiverId: { $in: [pId, ...childIds] } }],
-      content: regex
+      senderId: { $in: [pId, ...childIds] },
+      text: regex
     }).limit(10).sort({ timestamp: -1 });
-    messages.forEach(m => results.push({ type: 'message', id: m._id, title: 'Chat Message', subtitle: m.content?.substring(0, 50) + '...', url: `/chat` }));
+    messages.forEach(m => results.push({ type: 'message', id: m._id, title: 'Chat Message', subtitle: m.text?.substring(0, 50) + '...', url: `/chat` }));
 
     res.json({ success: true, data: results });
   } catch (error) {

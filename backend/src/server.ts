@@ -5,8 +5,9 @@ import helmet from 'helmet';
 import http from 'http';
 import { Server } from 'socket.io';
 import { connectDB } from './config/db';
-import { apiLimiter } from './middleware/rateLimiter';
+import { apiLimiter, authLimiter, mediaLimiter } from './middleware/rateLimiter';
 import { errorHandler } from './middleware/errorHandler';
+import { requestIdMiddleware } from './middleware/requestId.middleware';
 import { setupSockets } from './sockets/socketHandler';
 
 // Routes
@@ -40,12 +41,20 @@ import intelligenceRoutes from './routes/intelligence.routes';
 import recommendationsRoutes from './routes/recommendations.routes';
 import alertRulesRoutes from './routes/alertRules.routes';
 import reportsRoutes from './routes/reports.routes';
+import healthRoutes from './routes/health.routes';
 import { startDataRetentionCron } from './jobs/dataRetentionJob';
+import { env } from './config/env.config';
+import { runMigrations } from './migrations/migrate';
 
-dotenv.config();
 
-// Connect to MongoDB
-connectDB();
+
+// Connect to MongoDB and run migrations
+connectDB().then(() => {
+  return runMigrations();
+}).catch(err => {
+  console.error("Startup failed:", err);
+  process.exit(1);
+});
 
 const app = express();
 const server = http.createServer(app);
@@ -53,21 +62,22 @@ const server = http.createServer(app);
 // Socket.io for Real-time communication (Phase 2 mostly, but setup here)
 const io = new Server(server, {
   cors: {
-    origin: process.env.CLIENT_URL || 'http://localhost:5173',
+    origin: env.CLIENT_URL,
     methods: ['GET', 'POST']
   }
 });
 
 // Middleware
 app.use(helmet());
-app.use(cors({ origin: process.env.CLIENT_URL || 'http://localhost:5173' }));
+app.use(cors({ origin: env.CLIENT_URL }));
 app.use(express.json());
+app.use(requestIdMiddleware);
 
 // Apply rate limiter to all /api/ routes
 app.use('/api', apiLimiter);
 
 // API Routes
-app.use('/api/auth', authRoutes);
+app.use('/api/auth', authLimiter, authRoutes);
 app.use('/api/children', childrenRoutes);
 app.use('/api/pairing', pairingRoutes);
 app.use('/api/devices', devicesRoutes);
@@ -87,7 +97,7 @@ app.use('/api/notifications', notificationRoutes);
 app.use('/api/communication', communicationRoutes);
 app.use('/api/safety', safetyRoutes);
 app.use('/api/chat', chatRoutes);
-app.use('/api/media', mediaRoutes);
+app.use('/api/media', mediaLimiter, mediaRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/search', searchRoutes);
 app.use('/api/device-health', deviceHealthRoutes);
@@ -97,6 +107,7 @@ app.use('/api/intelligence', intelligenceRoutes);
 app.use('/api/recommendations', recommendationsRoutes);
 app.use('/api/alert-rules', alertRulesRoutes);
 app.use('/api/advanced-reports', reportsRoutes); // Use a distinct path from existing /api/reports
+app.use('/api/health', healthRoutes);
 
 // Global Error Handler
 app.use(errorHandler);
@@ -104,11 +115,11 @@ app.use(errorHandler);
 // Socket.io connection logic
 setupSockets(io);
 
-const PORT = process.env.PORT || 5000;
+const PORT = env.PORT;
 
 // Start background jobs
 startDataRetentionCron();
 
 server.listen(PORT, () => {
-  console.log(`Server running in ${process.env.NODE_ENV || 'development'} mode on port ${PORT}`);
+  console.log(`Server running in ${env.NODE_ENV} mode on port ${PORT}`);
 });

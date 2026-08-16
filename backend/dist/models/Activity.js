@@ -46,7 +46,10 @@ const activitySchema = new mongoose_1.Schema({
     title: { type: String, required: true },
     description: { type: String, required: true },
     metadata: { type: mongoose_1.Schema.Types.Mixed },
-    timestamp: { type: Date, default: Date.now },
-});
+    isForeground: { type: Boolean, default: true },
+    timestamp: { type: Date, default: Date.now }
+}, { timestamps: true });
+// Index for fetching recent activities per device rapidly
 activitySchema.index({ deviceId: 1, timestamp: -1 });
+activitySchema.index({ childId: 1, timestamp: -1 });
 exports.Activity = mongoose_1.default.model('Activity', activitySchema);

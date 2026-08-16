@@ -3,6 +3,8 @@ import { AuthRequest } from '../middleware/auth.middleware';
 import { sendSuccess, sendError } from '../utils/response';
 import { Parent } from '../models/Parent';
 import { AuditService } from '../services/AuditService';
+import crypto from 'crypto';
+import bcrypt from 'bcrypt';
 
 // Invite a Co-Parent
 export const inviteCoParent = async (req: AuthRequest, res: Response) => {
@@ -14,16 +16,21 @@ export const inviteCoParent = async (req: AuthRequest, res: Response) => {
       return sendError(res, 'Only the family owner can invite co-parents', 'FORBIDDEN', 403);
     }
 
-    // Mock invitation by creating an account with a default password (in real life, send email with reset link)
+    // Create an account with a randomly generated secure password.
+    // In a full production system with email, send a reset link instead.
     const existingUser = await Parent.findOne({ email });
     if (existingUser) {
       return sendError(res, 'User already exists', 'CONFLICT', 409);
     }
 
+    const generatedPassword = crypto.randomBytes(12).toString('hex');
+    const salt = await bcrypt.genSalt(10);
+    const passwordHash = await bcrypt.hash(generatedPassword, salt);
+
     const coParent = await Parent.create({
       email,
       fullName,
-      passwordHash: 'mock-hash-needs-reset', // In prod, generate a random hash or use a flow
+      passwordHash,
       familyId: ownerId,
       role: 'CO_PARENT',
       permissions: permissions || ['VIEW_ONLY']
@@ -40,7 +47,8 @@ export const inviteCoParent = async (req: AuthRequest, res: Response) => {
       req.ip
     );
 
-    sendSuccess(res, { id: coParent._id, email: coParent.email, role: coParent.role }, 'Co-parent invited successfully');
+    // Return the generated password ONCE so the owner can share it securely.
+    sendSuccess(res, { id: coParent._id, email: coParent.email, role: coParent.role, temporaryPassword: generatedPassword }, 'Co-parent invited successfully');
   } catch (error: any) {
     sendError(res, error.message);
   }
@@ -104,10 +112,10 @@ export const deleteFamilyData = async (req: AuthRequest, res: Response) => {
 
     const familyId = req.user.familyId;
     
-    // In a real app, you would verify a 2FA code or password here
-    // For this mockup, we just proceed.
+    // TODO: Verify 2FA code or password here before deletion
+    // Currently proceeding without 2FA for initial version.
     
-    // Simulate deleting all family data
+    // Deleting all family data
     const { Child } = await import('../models/Child');
     const { Device } = await import('../models/Device');
     const { Activity } = await import('../models/Activity');

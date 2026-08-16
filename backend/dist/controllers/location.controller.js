@@ -45,7 +45,17 @@ const syncLocation = async (req, res) => {
             timestamp: new Date(r.timestamp)
         })).filter(r => r.latitude >= -90 && r.latitude <= 90 && r.longitude >= -180 && r.longitude <= 180);
         if (validRecords.length > 0) {
-            await LocationRecord_1.LocationRecord.insertMany(validRecords);
+            // Idempotency: filter out records with timestamps that already exist for this device
+            const timestamps = validRecords.map((r) => r.timestamp);
+            const existingRecords = await LocationRecord_1.LocationRecord.find({
+                deviceId: device._id,
+                timestamp: { $in: timestamps }
+            }).select('timestamp');
+            const existingTimestamps = new Set(existingRecords.map(r => r.timestamp.getTime()));
+            const newRecords = validRecords.filter((r) => !existingTimestamps.has(r.timestamp.getTime()));
+            if (newRecords.length > 0) {
+                await LocationRecord_1.LocationRecord.insertMany(newRecords);
+            }
             // Emit the latest one to parent if needed
             const latest = validRecords.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())[0];
             const io = (0, socketHandler_1.getIo)();

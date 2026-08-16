@@ -23,7 +23,7 @@ class SafetyEventService {
         return { event, classification };
     }
     static async processChatMedia(parentId, childId, mediaAssetId, type) {
-        const classification = type === 'IMAGE' ? await aiProvider.analyzeImage({ id: mediaAssetId }) : { category: 'Safe', confidence: 100, severity: 'LOW' }; // Mock video analysis logic for prototype
+        const classification = type === 'IMAGE' ? await aiProvider.analyzeImage({ id: mediaAssetId }) : { category: 'Safe', confidence: 100, severity: 'LOW', source: 'System' }; // Mock video analysis logic for prototype
         const event = await this.handleClassification(parentId, childId, null, 'FAMILY_CHAT_MEDIA', classification, 'Chat Media Flagged', 'Media flagged in Family Chat', type, { mediaAssetId });
         return { event, classification };
     }

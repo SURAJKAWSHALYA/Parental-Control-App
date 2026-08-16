@@ -46,8 +46,12 @@ const messageSchema = new mongoose_1.Schema({
     replyToMessageId: { type: mongoose_1.Schema.Types.ObjectId, ref: 'Message' },
     status: { type: String, enum: ['SENDING', 'SENT', 'DELIVERED', 'READ', 'FAILED'], default: 'SENT' },
     safetyStatus: { type: String, enum: ['SAFE', 'REVIEW', 'FLAGGED', 'UNKNOWN'], default: 'UNKNOWN' },
+    flaggedCategory: { type: String },
+    deletedFor: [{ type: mongoose_1.Schema.Types.ObjectId, ref: 'Parent' }]
 }, { timestamps: true });
 messageSchema.index({ conversationId: 1, createdAt: -1 });
 messageSchema.index({ text: 'text' });
 messageSchema.index({ conversationId: 1, senderType: 1, safetyStatus: 1 });
+messageSchema.index({ conversationId: 1, deletedFor: 1 });
+messageSchema.index({ conversationId: 1, safetyStatus: 1 });
 exports.Message = mongoose_1.default.model('Message', messageSchema);

@@ -53,7 +53,7 @@ export class SafetyEventService {
     mediaAssetId: mongoose.Types.ObjectId | string,
     type: 'IMAGE' | 'VIDEO'
   ) {
-    const classification = type === 'IMAGE' ? await aiProvider.analyzeImage({ id: mediaAssetId }) : { category: 'Safe', confidence: 100, severity: 'LOW' as any }; // Mock video analysis logic for prototype
+    const classification = type === 'IMAGE' ? await aiProvider.analyzeImage({ id: mediaAssetId }) : { category: 'Safe', confidence: 100, severity: 'LOW' as any, source: 'System' }; // Mock video analysis logic for prototype
     const event = await this.handleClassification(parentId, childId, null, 'FAMILY_CHAT_MEDIA', classification, 'Chat Media Flagged', 'Media flagged in Family Chat', type, { mediaAssetId });
     return { event, classification };
   }

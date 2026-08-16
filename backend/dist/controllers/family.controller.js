@@ -32,11 +32,16 @@ var __importStar = (this && this.__importStar) || (function () {
         return result;
     };
 })();
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.deleteFamilyData = exports.updatePermissions = exports.getFamilyMembers = exports.inviteCoParent = void 0;
 const response_1 = require("../utils/response");
 const Parent_1 = require("../models/Parent");
 const AuditService_1 = require("../services/AuditService");
+const crypto_1 = __importDefault(require("crypto"));
+const bcrypt_1 = __importDefault(require("bcrypt"));
 // Invite a Co-Parent
 const inviteCoParent = async (req, res) => {
     try {
@@ -45,21 +50,26 @@ const inviteCoParent = async (req, res) => {
         if (req.user.role !== 'OWNER') {
             return (0, response_1.sendError)(res, 'Only the family owner can invite co-parents', 'FORBIDDEN', 403);
         }
-        // Mock invitation by creating an account with a default password (in real life, send email with reset link)
+        // Create an account with a randomly generated secure password.
+        // In a full production system with email, send a reset link instead.
         const existingUser = await Parent_1.Parent.findOne({ email });
         if (existingUser) {
             return (0, response_1.sendError)(res, 'User already exists', 'CONFLICT', 409);
         }
+        const generatedPassword = crypto_1.default.randomBytes(12).toString('hex');
+        const salt = await bcrypt_1.default.genSalt(10);
+        const passwordHash = await bcrypt_1.default.hash(generatedPassword, salt);
         const coParent = await Parent_1.Parent.create({
             email,
             fullName,
-            passwordHash: 'mock-hash-needs-reset', // In prod, generate a random hash or use a flow
+            passwordHash,
             familyId: ownerId,
             role: 'CO_PARENT',
             permissions: permissions || ['VIEW_ONLY']
         });
         await AuditService_1.AuditService.logAction(ownerId, req.user.id, req.user.role, 'INVITE_CO_PARENT', 'Parent', coParent._id.toString(), { email, permissions }, req.ip);
-        (0, response_1.sendSuccess)(res, { id: coParent._id, email: coParent.email, role: coParent.role }, 'Co-parent invited successfully');
+        // Return the generated password ONCE so the owner can share it securely.
+        (0, response_1.sendSuccess)(res, { id: coParent._id, email: coParent.email, role: coParent.role, temporaryPassword: generatedPassword }, 'Co-parent invited successfully');
     }
     catch (error) {
         (0, response_1.sendError)(res, error.message);
@@ -109,9 +119,9 @@ const deleteFamilyData = async (req, res) => {
             return (0, response_1.sendError)(res, 'Only the family owner can delete family data', 'FORBIDDEN', 403);
         }
         const familyId = req.user.familyId;
-        // In a real app, you would verify a 2FA code or password here
-        // For this mockup, we just proceed.
-        // Simulate deleting all family data
+        // TODO: Verify 2FA code or password here before deletion
+        // Currently proceeding without 2FA for initial version.
+        // Deleting all family data
         const { Child } = await Promise.resolve().then(() => __importStar(require('../models/Child')));
         const { Device } = await Promise.resolve().then(() => __importStar(require('../models/Device')));
         const { Activity } = await Promise.resolve().then(() => __importStar(require('../models/Activity')));

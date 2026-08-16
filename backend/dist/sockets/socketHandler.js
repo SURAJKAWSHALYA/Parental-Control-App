@@ -11,6 +11,9 @@ const CommandAudit_1 = require("../models/CommandAudit");
 const Alert_1 = require("../models/Alert");
 const Activity_1 = require("../models/Activity");
 let ioInstance;
+// Basic in-memory rate limiting for sockets
+const commandRateLimits = new Map();
+const COMMAND_LIMIT_MS = 1000; // 1 second per command per user
 const getIo = () => ioInstance;
 exports.getIo = getIo;
 const setupSockets = (io) => {
@@ -67,6 +70,14 @@ const setupSockets = (io) => {
             if (socket.user?.role !== 'parent')
                 return;
             try {
+                // Rate limiting check
+                const lastCmd = commandRateLimits.get(socket.user.parentId) || 0;
+                if (Date.now() - lastCmd < COMMAND_LIMIT_MS) {
+                    if (callback)
+                        callback({ success: false, error: 'Rate limit exceeded. Please wait.' });
+                    return;
+                }
+                commandRateLimits.set(socket.user.parentId, Date.now());
                 const { childId, deviceId, commandType } = data;
                 // Verify parent owns child and child owns device
                 const child = await Child_1.Child.findOne({ _id: childId, parentId: socket.user.parentId });

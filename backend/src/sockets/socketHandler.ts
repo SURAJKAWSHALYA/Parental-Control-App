@@ -12,6 +12,10 @@ interface AuthSocket extends Socket {
 
 let ioInstance: Server;
 
+// Basic in-memory rate limiting for sockets
+const commandRateLimits = new Map<string, number>();
+const COMMAND_LIMIT_MS = 1000; // 1 second per command per user
+
 export const getIo = () => ioInstance;
 
 export const setupSockets = (io: Server) => {
@@ -71,6 +75,14 @@ export const setupSockets = (io: Server) => {
       if (socket.user?.role !== 'parent') return;
       
       try {
+        // Rate limiting check
+        const lastCmd = commandRateLimits.get(socket.user.parentId) || 0;
+        if (Date.now() - lastCmd < COMMAND_LIMIT_MS) {
+           if (callback) callback({ success: false, error: 'Rate limit exceeded. Please wait.' });
+           return;
+        }
+        commandRateLimits.set(socket.user.parentId, Date.now());
+
         const { childId, deviceId, commandType } = data;
         
         // Verify parent owns child and child owns device

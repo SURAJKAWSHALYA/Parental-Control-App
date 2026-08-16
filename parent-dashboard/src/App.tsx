@@ -2,6 +2,7 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
 import type { ReactNode } from 'react';
 import DashboardLayout from './layouts/DashboardLayout';
+import { ErrorBoundary } from './components/ErrorBoundary';
 
 // Pages
 import Login from './pages/Login';
@@ -26,6 +27,7 @@ import SafetySettings from './pages/SafetySettings';
 import FamilySafety from './pages/FamilySafety';
 import MediaGallery from './pages/MediaGallery';
 import Settings from './pages/Settings';
+import SystemStatus from './pages/SystemStatus';
 
 const ProtectedRoute = ({ children }: { children: ReactNode }) => {
   const { user, loading } = useAuth();
@@ -43,7 +45,8 @@ const ProtectedRoute = ({ children }: { children: ReactNode }) => {
 
 function App() {
   return (
-    <Routes>
+    <ErrorBoundary>
+      <Routes>
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
       
@@ -74,10 +77,12 @@ function App() {
         <Route path="media" element={<MediaGallery />} />
         <Route path="chat" element={<Placeholder title="Family Chat" />} />
         <Route path="settings" element={<Settings />} />
+        <Route path="system-status" element={<SystemStatus />} />
       </Route>
       
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
+    </ErrorBoundary>
   );
 }
 

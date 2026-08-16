@@ -4,7 +4,6 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = __importDefault(require("express"));
-const dotenv_1 = __importDefault(require("dotenv"));
 const cors_1 = __importDefault(require("cors"));
 const helmet_1 = __importDefault(require("helmet"));
 const http_1 = __importDefault(require("http"));
@@ -12,6 +11,7 @@ const socket_io_1 = require("socket.io");
 const db_1 = require("./config/db");
 const rateLimiter_1 = require("./middleware/rateLimiter");
 const errorHandler_1 = require("./middleware/errorHandler");
+const requestId_middleware_1 = require("./middleware/requestId.middleware");
 const socketHandler_1 = require("./sockets/socketHandler");
 // Routes
 const auth_routes_1 = __importDefault(require("./routes/auth.routes"));
@@ -44,27 +44,35 @@ const intelligence_routes_1 = __importDefault(require("./routes/intelligence.rou
 const recommendations_routes_1 = __importDefault(require("./routes/recommendations.routes"));
 const alertRules_routes_1 = __importDefault(require("./routes/alertRules.routes"));
 const reports_routes_1 = __importDefault(require("./routes/reports.routes"));
+const health_routes_1 = __importDefault(require("./routes/health.routes"));
 const dataRetentionJob_1 = require("./jobs/dataRetentionJob");
-dotenv_1.default.config();
-// Connect to MongoDB
-(0, db_1.connectDB)();
+const env_config_1 = require("./config/env.config");
+const migrate_1 = require("./migrations/migrate");
+// Connect to MongoDB and run migrations
+(0, db_1.connectDB)().then(() => {
+    return (0, migrate_1.runMigrations)();
+}).catch(err => {
+    console.error("Startup failed:", err);
+    process.exit(1);
+});
 const app = (0, express_1.default)();
 const server = http_1.default.createServer(app);
 // Socket.io for Real-time communication (Phase 2 mostly, but setup here)
 const io = new socket_io_1.Server(server, {
     cors: {
-        origin: process.env.CLIENT_URL || 'http://localhost:5173',
+        origin: env_config_1.env.CLIENT_URL,
         methods: ['GET', 'POST']
     }
 });
 // Middleware
 app.use((0, helmet_1.default)());
-app.use((0, cors_1.default)({ origin: process.env.CLIENT_URL || 'http://localhost:5173' }));
+app.use((0, cors_1.default)({ origin: env_config_1.env.CLIENT_URL }));
 app.use(express_1.default.json());
+app.use(requestId_middleware_1.requestIdMiddleware);
 // Apply rate limiter to all /api/ routes
 app.use('/api', rateLimiter_1.apiLimiter);
 // API Routes
-app.use('/api/auth', auth_routes_1.default);
+app.use('/api/auth', rateLimiter_1.authLimiter, auth_routes_1.default);
 app.use('/api/children', children_routes_1.default);
 app.use('/api/pairing', pairing_routes_1.default);
 app.use('/api/devices', devices_routes_1.default);
@@ -84,7 +92,7 @@ app.use('/api/notifications', notification_routes_1.default);
 app.use('/api/communication', communication_routes_1.default);
 app.use('/api/safety', safety_routes_1.default);
 app.use('/api/chat', chat_routes_1.default);
-app.use('/api/media', media_routes_1.default);
+app.use('/api/media', rateLimiter_1.mediaLimiter, media_routes_1.default);
 app.use('/api/analytics', analytics_routes_1.default);
 app.use('/api/search', search_routes_1.default);
 app.use('/api/device-health', deviceHealth_routes_1.default);
@@ -94,13 +102,14 @@ app.use('/api/intelligence', intelligence_routes_1.default);
 app.use('/api/recommendations', recommendations_routes_1.default);
 app.use('/api/alert-rules', alertRules_routes_1.default);
 app.use('/api/advanced-reports', reports_routes_1.default); // Use a distinct path from existing /api/reports
+app.use('/api/health', health_routes_1.default);
 // Global Error Handler
 app.use(errorHandler_1.errorHandler);
 // Socket.io connection logic
 (0, socketHandler_1.setupSockets)(io);
-const PORT = process.env.PORT || 5000;
+const PORT = env_config_1.env.PORT;
 // Start background jobs
 (0, dataRetentionJob_1.startDataRetentionCron)();
 server.listen(PORT, () => {
-    console.log(`Server running in ${process.env.NODE_ENV || 'development'} mode on port ${PORT}`);
+    console.log(`Server running in ${env_config_1.env.NODE_ENV} mode on port ${PORT}`);
 });

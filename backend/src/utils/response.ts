@@ -6,10 +6,11 @@ export const sendSuccess = (res: any, data: any, message: string = 'Operation su
   });
 };
 
-export const sendError = (res: any, message: string = 'Something went wrong', errorCode: string = 'SERVER_ERROR', statusCode: number = 500) => {
+export const sendError = (res: any, message: string = 'Something went wrong', errorCode: string = 'SERVER_ERROR', statusCode: number = 500, requestId?: string) => {
   return res.status(statusCode).json({
     success: false,
     message,
     errorCode,
+    requestId,
   });
 };
