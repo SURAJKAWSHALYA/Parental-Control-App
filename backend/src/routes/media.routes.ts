@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import multer from 'multer';
-import { uploadMedia, getMediaStream, deleteMedia, getMediaGallery } from '../controllers/media.controller';
-import { protect } from '../middleware/auth.middleware';
+import { uploadMedia, getMediaStream, deleteMedia, getMediaGallery, getMediaToken } from '../controllers/media.controller';
+import { protect, optionalProtect } from '../middleware/auth.middleware';
 
 const router = Router();
 
@@ -28,12 +28,15 @@ const upload = multer({
   }
 });
 
-// All media routes are protected
+// Optional auth for the stream route to allow token access
+router.get('/:id', optionalProtect, getMediaStream);
+
+// All other media routes are protected
 router.use(protect);
 
 router.post('/upload', upload.single('media'), uploadMedia);
 router.get('/gallery', getMediaGallery);
-router.get('/:id', getMediaStream);
+router.get('/:id/token', getMediaToken);
 router.delete('/:id', deleteMedia);
 
 export default router;

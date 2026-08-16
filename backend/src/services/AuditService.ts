@@ -13,7 +13,9 @@ export class AuditService {
     resourceType: string,
     resourceId?: string,
     metadata?: any,
-    ipAddress?: string
+    ipAddress?: string,
+    requestId?: string,
+    result: 'SUCCESS' | 'FAILURE' | 'PENDING' = 'SUCCESS'
   ) {
     try {
       // Create an IP hash instead of storing raw IP to respect privacy requirements
@@ -30,6 +32,8 @@ export class AuditService {
         resourceId,
         metadata,
         ipHash,
+        requestId,
+        result,
         timestamp: new Date()
       });
     } catch (error) {

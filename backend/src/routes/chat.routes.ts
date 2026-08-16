@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { getConversations, createConversation, getMessages, sendMessage, markAsRead, deleteMessage } from '../controllers/chat.controller';
 import { protect } from '../middleware/auth.middleware';
+import { idempotencyMiddleware } from '../middleware/idempotency.middleware';
 
 const router = Router();
 
@@ -12,7 +13,7 @@ router.route('/conversations')
 
 router.route('/:conversationId/messages')
   .get(getMessages)
-  .post(sendMessage);
+  .post(idempotencyMiddleware, sendMessage);
 
 router.route('/messages/:id/read')
   .put(markAsRead);

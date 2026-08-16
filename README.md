@@ -1,79 +1,83 @@
 # Parental Control Application
 
-A comprehensive parental control system featuring a parent dashboard, a REST API backend, and an Android client. The system allows parents to manage devices, enforce app limits, track screen time, and receive real-time notifications about their child's device usage.
+A comprehensive parental control system featuring a parent dashboard, a REST API backend, and an Android client. The system allows parents to manage devices, enforce app limits, track screen time, locate children via GPS, monitor chat for cyberbullying, and receive real-time notifications.
 
-## Architecture
+## Architecture & Technology Stack
 
-The system consists of three main components:
+The system consists of three main components orchestrating real-time safety via WebSockets:
 
-1. **Parent Dashboard** (React, Vite, TailwindCSS) - A responsive web UI for parents to manage children, pair devices, and view usage statistics.
-2. **Backend API** (Node.js, Express, MongoDB, Socket.IO) - The central server handling authentication, device pairing, rule storage, data aggregation, and real-time socket communications.
-3. **Child Android App** (Kotlin, Compose) - An Android client that monitors usage via `UsageStatsManager`, caches rules locally, and securely evaluates policies even when offline.
+1. **Parent Dashboard** (React 18, Vite, Tailwind CSS, Recharts)
+2. **Backend API** (Node.js, Express, MongoDB, Socket.IO, JWT)
+3. **Child Android App** (Kotlin, WorkManager, Jetpack Compose, Room)
 
-## Technology Stack
+For an in-depth architectural breakdown, refer to [ARCHITECTURE.md](./ARCHITECTURE.md).
 
-- **Frontend**: React 18, TypeScript, Tailwind CSS, Lucide React, Recharts, Vite, React Router
-- **Backend**: Node.js, Express, TypeScript, MongoDB (Mongoose), Socket.IO, JWT, Helmet, CORS
-- **Android**: Kotlin, Jetpack Compose, WorkManager, UsageStatsManager, SharedPreferences
+---
 
-## Features
+## Features (Phases 1-7)
 
-### Phase 1: Core System
-- **Authentication**: Secure JWT-based parent registration and login.
-- **Child Management**: Create, edit, and delete child profiles.
-- **Secure Device Pairing**: Link Android devices to children using short-lived 6-digit PIN codes.
-- **Real-Time Heartbeat**: Devices report online/offline status and battery percentage via WebSockets.
+- **Phase 1 (Core)**: Secure authentication, child profiles, and secure 6-digit PIN device pairing.
+- **Phase 2 (Monitoring)**: App limits, Screen time analytics, Downtime schedules, and Offline rule caching.
+- **Phase 3 (Location)**: Real-time GPS tracking, Location History, and Geofencing (Safe/Danger zones).
+- **Phase 4 (Safety)**: Real-time SOS alerts, Fall detection, and notification deduplication.
+- **Phase 5 (Communication)**: Encrypted Family Chat and Media Gallery uploads.
+- **Phase 6 (Intelligence)**: Automated AI Safety Classification for detecting cyberbullying or inappropriate content in chat/media.
+- **Phase 7 (Production)**: Comprehensive automated testing, Docker containerization, CI/CD, and IDOR prevention.
 
-### Phase 2: Core Parental Controls
-- **Usage Monitoring**: Collects actual `UsageStats` from the Android OS and synchronizes it to the backend.
-- **Screen Time Analytics**: Daily, 7-day, and 30-day interactive charts displaying usage distribution across apps.
-- **App Limits**: Parents can define daily time limits for specific applications.
-- **Downtime Schedules**: Configurable time blocks (e.g., Bedtime, School hours) that support overnight shifts (22:00-06:00).
-- **Allowed Apps**: Exceptions (like Phone, Messages) that bypass all limit and downtime restrictions.
-- **Real-Time Alerts**: Live notifications via Socket.IO for limit breaches, permission disablings, and device offline states. Intelligent deduplication suppresses spamming (15-minute cooldown per alert type).
-- **Activity Timeline**: A chronological history of all device events.
-- **Offline Rule Engine**: The Android client securely caches the latest rules. If the internet disconnects, limits and downtime continue to be enforced. When reconnected, a `SyncWorker` queue uploads pending usage logs.
+---
 
-## Android OS Limitations
+## Parent Setup Guide
 
-> **Important**: This application does not use rooting, exploits, or hidden accessibility abuse.
-If the Android OS sandbox does not natively permit force-closing a third-party application, the `AppRestrictionManager` engine will calculate the correct restriction policy (e.g., `LIMIT_REACHED`), but will gracefully log that "OS-level enforcement is unavailable with current Android capabilities." The dashboard truthfully reflects the intention, maintaining system integrity and user trust.
+1. **Create Parent Account**: Navigate to the web dashboard and register using a secure password.
+2. **Add Child**: From the dashboard, add a child profile providing a name and age.
+3. **Install Child App**: Download and install the release APK onto the child's Android device.
+4. **Pair Device**: Open the app, generate a 6-digit PIN, and enter it into the Parent Dashboard to securely link the device.
+5. **Grant Required Permissions**: On the child's device, follow the prompts to grant Location, Usage Stats, and Display Over Other Apps permissions.
+6. **Configure Controls**: Set daily App Limits and overnight Downtime schedules.
+7. **Configure Location**: Create safe Geofences (e.g., "School", "Home").
+8. **Configure Safety**: Review and adjust AI Intelligence sensitivity if applicable.
+9. **Configure Family Chat**: Send a welcome message via the Family Chat tab.
+10. **Review Dashboard**: Verify the device's battery and online status on your homepage.
 
-## Security Overview
+---
 
-- **Authentication**: All endpoints (except login/register/pairing verification) require a valid Bearer token.
-- **Data Validation**: Strict Mongoose schemas and controller checks ensure malformed payloads (e.g., invalid downtime hours) are rejected.
-- **Ownership Verification**: Every API request involving a device verifies that the requesting Parent owns the Child, and the Child owns the Device. Cross-parent contamination is impossible.
-- **Socket Authentication**: Devices authenticate their socket connections using a securely stored device token generated during the pairing process.
+## Capability Matrix (Android Limitations)
 
-## Installation
+To comply with Google Play Policies and Android OS sandboxing, certain features face strict limitations:
 
-### Prerequisites
-- Node.js (v18+)
-- MongoDB Instance (Local or Atlas)
-- Android Studio (for client development)
+| Feature | Supported? | Required Permission | Android Limitation / Note |
+|---------|-----------|--------------------|---------------------------|
+| **Location** | ✅ Yes | `ACCESS_FINE_LOCATION` | Requires user consent. |
+| **Background Location** | ✅ Yes | `ACCESS_BACKGROUND_LOCATION` | Requires manual selection of "Allow all the time". |
+| **App Usage Tracking** | ✅ Yes | `PACKAGE_USAGE_STATS` | Must be granted via deep-link to Settings. |
+| **App Blocking** | ⚠️ Partial | `SYSTEM_ALERT_WINDOW` | We overlay a "Blocked" screen. OS prevents force-closing third-party apps directly without Root. |
+| **Call / SMS Logs** | ❌ No | `READ_CALL_LOG`, `READ_SMS` | Strictly prohibited by Google Play unless we are the default dialer. |
+| **Camera/Mic Survalience** | ❌ No | N/A | We do not support covert spying. Violates ethical policies. |
+| **Notifications** | ✅ Yes | `POST_NOTIFICATIONS` | Supported Android 13+. |
 
-### 1. Backend Setup
+---
+
+## Installation & Deployment
+
+### Local Development
 ```bash
+# Terminal 1: Backend
 cd backend
 npm install
-# Create a .env file based on environment variables below
 npm run dev
-```
 
-### 2. Frontend Setup
-```bash
+# Terminal 2: Frontend
 cd parent-dashboard
 npm install
 npm run dev
 ```
-The dashboard runs by default on `http://localhost:3000`.
 
-### Environment Variables (Backend)
-```env
-PORT=5000
-MONGODB_URI=mongodb://localhost:27017/parental-control
-JWT_SECRET=your_secure_jwt_secret_key
-JWT_EXPIRES_IN=30d
-CLIENT_URL=http://localhost:3000
-```
+### Production Deployment (Docker)
+Please refer to [DEPLOYMENT.md](./DEPLOYMENT.md) for detailed instructions on deploying the `docker-compose.yml` stack with Nginx.
+
+## Further Documentation
+- [Security Architecture](./SECURITY.md)
+- [API Documentation](./API.md)
+- [Android Setup & Compilation](./ANDROID_SETUP.md)
+- [Database & Backups](./DATABASE.md)
+- [Troubleshooting](./TROUBLESHOOTING.md)

@@ -11,6 +11,7 @@ export interface IDevice extends Document {
   permissions: IPermissionCapability[];
   notificationSettings: INotificationSettings;
   retentionSettings: IRetentionSettings;
+  configurationVersion: number;
   lastSeen: Date;
   appVersion: string;
   createdAt: Date;
@@ -100,6 +101,10 @@ const deviceSchema = new Schema<IDevice>(
       callsDays: { type: Number, default: 30 },
       smsDays: { type: Number, default: 30 },
       safetyEventsDays: { type: Number, default: 90 },
+    },
+    configurationVersion: {
+      type: Number,
+      default: 1,
     },
   },
   {

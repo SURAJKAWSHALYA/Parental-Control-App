@@ -6,11 +6,12 @@ import {
   deleteLocationHistory
 } from '../controllers/location.controller';
 import { protect } from '../middleware/auth.middleware';
+import { idempotencyMiddleware } from '../middleware/idempotency.middleware';
 
 const router = Router();
 
 // Device sync route could be open to device token or parent token
-router.post('/sync', protect, syncLocation);
+router.post('/sync', protect, idempotencyMiddleware, syncLocation);
 
 router.use(protect);
 

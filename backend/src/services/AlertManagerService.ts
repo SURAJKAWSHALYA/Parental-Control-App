@@ -47,17 +47,32 @@ export class AlertManagerService {
       childId: data.childId,
       deviceId: data.deviceId,
       type: data.type,
-      createdAt: { $gte: cooldownDate }
+      isRead: false,
+      lastOccurredAt: { $gte: cooldownDate }
     });
 
     if (recentAlert) {
-      return null; // Cooldown active, suppress duplicate alert
+      recentAlert.count += 1;
+      recentAlert.lastOccurredAt = new Date();
+
+      // Escalate severity if count reaches threshold
+      const ESCALATION_THRESHOLD = 3;
+      if (recentAlert.count >= ESCALATION_THRESHOLD) {
+        if (recentAlert.severity === 'LOW') recentAlert.severity = 'MEDIUM';
+        else if (recentAlert.severity === 'MEDIUM') recentAlert.severity = 'HIGH';
+        else if (recentAlert.severity === 'HIGH') recentAlert.severity = 'CRITICAL';
+      }
+
+      await recentAlert.save();
+      return recentAlert;
     }
 
     // 4. Create Alert
     const alert = new Alert({
       ...data,
-      severity
+      severity,
+      count: 1,
+      lastOccurredAt: new Date()
     });
 
     await alert.save();

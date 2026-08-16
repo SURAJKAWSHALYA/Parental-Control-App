@@ -3,6 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.server = exports.app = void 0;
 const express_1 = __importDefault(require("express"));
 const cors_1 = __importDefault(require("cors"));
 const helmet_1 = __importDefault(require("helmet"));
@@ -48,15 +49,19 @@ const health_routes_1 = __importDefault(require("./routes/health.routes"));
 const dataRetentionJob_1 = require("./jobs/dataRetentionJob");
 const env_config_1 = require("./config/env.config");
 const migrate_1 = require("./migrations/migrate");
-// Connect to MongoDB and run migrations
-(0, db_1.connectDB)().then(() => {
-    return (0, migrate_1.runMigrations)();
-}).catch(err => {
-    console.error("Startup failed:", err);
-    process.exit(1);
-});
+// Connect to MongoDB and run migrations conditionally (tests handle it separately)
+if (process.env.NODE_ENV !== 'test') {
+    (0, db_1.connectDB)().then(() => {
+        return (0, migrate_1.runMigrations)();
+    }).catch(err => {
+        console.error("Startup failed:", err);
+        process.exit(1);
+    });
+}
 const app = (0, express_1.default)();
+exports.app = app;
 const server = http_1.default.createServer(app);
+exports.server = server;
 // Socket.io for Real-time communication (Phase 2 mostly, but setup here)
 const io = new socket_io_1.Server(server, {
     cors: {
@@ -108,8 +113,10 @@ app.use(errorHandler_1.errorHandler);
 // Socket.io connection logic
 (0, socketHandler_1.setupSockets)(io);
 const PORT = env_config_1.env.PORT;
-// Start background jobs
-(0, dataRetentionJob_1.startDataRetentionCron)();
-server.listen(PORT, () => {
-    console.log(`Server running in ${env_config_1.env.NODE_ENV} mode on port ${PORT}`);
-});
+if (process.env.NODE_ENV !== 'test') {
+    // Start background jobs
+    (0, dataRetentionJob_1.startDataRetentionCron)();
+    server.listen(PORT, () => {
+        console.log(`Server running in ${env_config_1.env.NODE_ENV} mode on port ${PORT}`);
+    });
+}

@@ -5,6 +5,8 @@ import { Child } from '../models/Child';
 import { CommandAudit } from '../models/CommandAudit';
 import { Alert } from '../models/Alert';
 import { Activity } from '../models/Activity';
+import { createAdapter } from '@socket.io/redis-adapter';
+import Redis from 'ioredis';
 
 interface AuthSocket extends Socket {
   user?: any; // parent or device object
@@ -20,6 +22,13 @@ export const getIo = () => ioInstance;
 
 export const setupSockets = (io: Server) => {
   ioInstance = io;
+  
+  if (process.env.REDIS_URL) {
+    const pubClient = new Redis(process.env.REDIS_URL);
+    const subClient = pubClient.duplicate();
+    io.adapter(createAdapter(pubClient, subClient));
+  }
+
   // Middleware for authentication
   io.use(async (socket: AuthSocket, next) => {
     try {

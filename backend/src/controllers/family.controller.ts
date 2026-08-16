@@ -44,7 +44,8 @@ export const inviteCoParent = async (req: AuthRequest, res: Response) => {
       'Parent',
       coParent._id.toString(),
       { email, permissions },
-      req.ip
+      req.ip,
+      (req as any).id
     );
 
     // Return the generated password ONCE so the owner can share it securely.
@@ -94,7 +95,8 @@ export const updatePermissions = async (req: AuthRequest, res: Response) => {
       'Parent',
       member._id.toString(),
       { newPermissions: permissions },
-      req.ip
+      req.ip,
+      (req as any).id
     );
 
     sendSuccess(res, member, 'Permissions updated successfully');
@@ -138,7 +140,8 @@ export const deleteFamilyData = async (req: AuthRequest, res: Response) => {
       'Family',
       familyId,
       {},
-      req.ip
+      req.ip,
+      (req as any).id
     );
 
     sendSuccess(res, {}, 'Family data scheduled for deletion');

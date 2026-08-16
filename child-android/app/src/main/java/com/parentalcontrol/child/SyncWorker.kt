@@ -1,50 +1,82 @@
 package com.parentalcontrol.child
 
 import android.content.Context
-import androidx.work.Worker
+import android.content.Intent
+import android.content.IntentFilter
+import android.os.BatteryManager
+import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
+import com.parentalcontrol.child.data.AppDatabase
 
 class SyncWorker(
     context: Context,
     workerParams: WorkerParameters
-) : Worker(context, workerParams) {
+) : CoroutineWorker(context, workerParams) {
 
-    override fun doWork(): Result {
+    override suspend fun doWork(): Result {
         return try {
-            // 1. Fetch latest rules from server (Limits, Downtime, Allowed Apps)
-            // 2. Overwrite local SharedPreferences / Room cache (Server wins)
-            
-            // Simulating Website Rules Fetch
-            val websiteRuleDao = com.parentalcontrol.child.data.AppDatabase.getDatabase(applicationContext).websiteRuleDao()
-            // We would make a Retrofit call here, but for now just acknowledge Sync via Socket
-            // val apiRules = websiteService.getRules(deviceId)
-            // websiteRuleDao.insertRules(apiRules)
-            
-            val locationDao = com.parentalcontrol.child.data.AppDatabase.getDatabase(applicationContext).locationRecordDao()
+            // Check battery level to prevent draining when low (Battery-Aware Sync)
+            val batteryStatus: Intent? = IntentFilter(Intent.ACTION_BATTERY_CHANGED).let { ifilter ->
+                applicationContext.registerReceiver(null, ifilter)
+            }
+            val status: Int = batteryStatus?.getIntExtra(BatteryManager.EXTRA_STATUS, -1) ?: -1
+            val isCharging: Boolean = status == BatteryManager.BATTERY_STATUS_CHARGING || status == BatteryManager.BATTERY_STATUS_FULL
+            val level: Int = batteryStatus?.getIntExtra(BatteryManager.EXTRA_LEVEL, -1) ?: -1
+            val scale: Int = batteryStatus?.getIntExtra(BatteryManager.EXTRA_SCALE, -1) ?: -1
+            val batteryPct = level * 100 / scale.toFloat()
+
+            // Defer work if battery is critically low (< 15%) and not charging
+            if (batteryPct < 15 && !isCharging) {
+                return Result.retry() // WorkManager will try again later with exponential backoff
+            }
+
+            val db = AppDatabase.getDatabase(applicationContext)
+            val pendingEventDao = db.pendingEventDao()
+            val locationDao = db.locationRecordDao()
+
+            // 1. Upload Pending Events (Activities, Safety Events, Device Health)
+            val pendingEvents = pendingEventDao.getPendingEvents(50)
+            if (pendingEvents.isNotEmpty()) {
+                val eventIds = pendingEvents.map { it.eventId }
+                pendingEventDao.updateEventStatuses(eventIds, "SYNCING")
+                
+                // TODO: Replace with actual Retrofit POST /api/sync/events
+                // val success = syncService.uploadEvents(pendingEvents)
+                val success = true // Simulated success
+                
+                if (success) {
+                    pendingEventDao.deleteEvents(eventIds)
+                } else {
+                    pendingEventDao.updateEventStatuses(eventIds, "FAILED")
+                }
+            }
+
+            // 2. Upload Pending Locations
             val pendingLocations = locationDao.getPendingLocations(100)
             if (pendingLocations.isNotEmpty()) {
-                // In real app, POST /api/location/sync
-                // If successful (HTTP 200 OK):
-                // val idsToRemove = pendingLocations.map { it.id }
-                // locationDao.deleteLocations(idsToRemove)
+                // TODO: POST /api/location/sync
+                val success = true // Simulated success
+                if (success) {
+                    val idsToRemove = pendingLocations.map { it.id }
+                    // Simulate delete
+                    // locationDao.deleteLocations(idsToRemove)
+                }
             }
-            
-            // Simulating Geofence Sync
-            // val apiGeofences = geofenceService.getGeofences(deviceId)
-            // val geofenceManager = com.parentalcontrol.child.services.GeofenceManager(applicationContext)
-            // geofenceManager.registerGeofences(apiGeofences)
-            
-            // Emitting sync ack
-            // socket.emit("website:rules:sync", { "status": "success" })
-            
-            // 3. Batch upload pending AppUsage statistics from local DB queue
-            // 4. Batch upload pending ActivityEvents (e.g., LIMIT_REACHED)
-            
-            // 5. On successful upload, clear the local pending queues
+
+            // 3. Fetch latest configuration (App Limits, Downtime, Website Rules)
+            // with Configuration Versioning check
+            val currentConfigVersion = applicationContext.getSharedPreferences("config", Context.MODE_PRIVATE)
+                .getInt("configurationVersion", 0)
+                
+            // val newConfig = syncService.fetchConfig(currentConfigVersion)
+            // if (newConfig.version > currentConfigVersion) {
+            //      applyConfig(newConfig)
+            //      saveNewVersion(newConfig.version)
+            // }
 
             Result.success()
         } catch (e: Exception) {
-            // If network is still down or server errors, retry later
+            // If network is still down or server errors, retry later using WorkManager exponential backoff
             Result.retry()
         }
     }

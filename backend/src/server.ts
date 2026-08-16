@@ -8,6 +8,7 @@ import { connectDB } from './config/db';
 import { apiLimiter, authLimiter, mediaLimiter } from './middleware/rateLimiter';
 import { errorHandler } from './middleware/errorHandler';
 import { requestIdMiddleware } from './middleware/requestId.middleware';
+import { metricsMiddleware } from './middleware/metrics.middleware';
 import { setupSockets } from './sockets/socketHandler';
 
 // Routes
@@ -48,13 +49,15 @@ import { runMigrations } from './migrations/migrate';
 
 
 
-// Connect to MongoDB and run migrations
-connectDB().then(() => {
-  return runMigrations();
-}).catch(err => {
-  console.error("Startup failed:", err);
-  process.exit(1);
-});
+// Connect to MongoDB and run migrations conditionally (tests handle it separately)
+if (process.env.NODE_ENV !== 'test') {
+  connectDB().then(() => {
+    return runMigrations();
+  }).catch(err => {
+    console.error("Startup failed:", err);
+    process.exit(1);
+  });
+}
 
 const app = express();
 const server = http.createServer(app);
@@ -72,6 +75,7 @@ app.use(helmet());
 app.use(cors({ origin: env.CLIENT_URL }));
 app.use(express.json());
 app.use(requestIdMiddleware);
+app.use(metricsMiddleware);
 
 // Apply rate limiter to all /api/ routes
 app.use('/api', apiLimiter);
@@ -117,9 +121,13 @@ setupSockets(io);
 
 const PORT = env.PORT;
 
-// Start background jobs
-startDataRetentionCron();
+if (process.env.NODE_ENV !== 'test') {
+  // Start background jobs
+  startDataRetentionCron();
 
-server.listen(PORT, () => {
-  console.log(`Server running in ${env.NODE_ENV} mode on port ${PORT}`);
-});
+  server.listen(PORT, () => {
+    console.log(`Server running in ${env.NODE_ENV} mode on port ${PORT}`);
+  });
+}
+
+export { app, server };

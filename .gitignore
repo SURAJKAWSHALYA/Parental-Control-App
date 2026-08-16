@@ -22,3 +22,18 @@ Thumbs.db
 .env
 .env.test
 .env.production
+*.pem
+*.jks
+*.keystore
+
+# Build Output
+dist/
+build/
+out/
+.next/
+
+# Android
+.gradle/
+local.properties
+*.apk
+*.aab

@@ -6,9 +6,27 @@ import { AuthRequest } from '../middleware/auth.middleware';
 export const getAlerts = async (req: AuthRequest, res: Response) => {
   try {
     const parentId = req.user._id;
+    const { page = 1, limit = 50 } = req.query;
     
-    const alerts = await Alert.find({ parentId }).sort({ createdAt: -1 }).limit(100);
-    sendSuccess(res, alerts, 'Alerts fetched successfully');
+    const parsedLimit = Math.min(Number(limit) || 50, 100);
+    const parsedPage = Math.max(Number(page) || 1, 1);
+    
+    const alerts = await Alert.find({ parentId })
+      .sort({ createdAt: -1 })
+      .skip((parsedPage - 1) * parsedLimit)
+      .limit(parsedLimit);
+      
+    const total = await Alert.countDocuments({ parentId });
+    
+    sendSuccess(res, {
+      data: alerts,
+      pagination: {
+        total,
+        page: parsedPage,
+        limit: parsedLimit,
+        totalPages: Math.ceil(total / parsedLimit)
+      }
+    }, 'Alerts fetched successfully');
   } catch (error: any) {
     sendError(res, error.message);
   }

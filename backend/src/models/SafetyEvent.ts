@@ -8,6 +8,8 @@ export interface ISafetyEvent extends Document {
   category: string;
   severity: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
   confidence: number;
+  confidenceLevel: 'LOW' | 'MEDIUM' | 'HIGH';
+  confidenceReason?: string;
   title: string;
   description: string;
   evidenceType: string;
@@ -36,6 +38,12 @@ const safetyEventSchema = new Schema<ISafetyEvent>(
       required: true
     },
     confidence: { type: Number, required: true },
+    confidenceLevel: {
+      type: String,
+      enum: ['LOW', 'MEDIUM', 'HIGH'],
+      default: 'MEDIUM'
+    },
+    confidenceReason: { type: String },
     title: { type: String, required: true },
     description: { type: String, required: true },
     evidenceType: { type: String, required: true },

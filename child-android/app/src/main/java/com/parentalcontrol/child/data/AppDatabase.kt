@@ -9,12 +9,14 @@ import androidx.room.RoomDatabase
     WebsiteRuleEntity::class, 
     WebsiteCategoryEntity::class,
     LocationRecordEntity::class,
-    MessageEntity::class
-], version = 3, exportSchema = false)
+    MessageEntity::class,
+    PendingEventEntity::class
+], version = 4, exportSchema = false)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun websiteRuleDao(): WebsiteRuleDao
     abstract fun locationRecordDao(): LocationRecordDao
     abstract fun messageDao(): MessageDao
+    abstract fun pendingEventDao(): PendingEventDao
 
     companion object {
         @Volatile

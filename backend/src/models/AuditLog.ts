@@ -9,6 +9,8 @@ export interface IAuditLog extends Document {
   resourceId?: mongoose.Types.ObjectId | string;
   metadata?: any;
   ipHash?: string;
+  requestId?: string;
+  result?: string;
   timestamp: Date;
 }
 
@@ -22,6 +24,8 @@ const auditLogSchema = new Schema<IAuditLog>(
     resourceId: { type: Schema.Types.Mixed }, // Can be an ObjectId or string
     metadata: { type: Schema.Types.Mixed },
     ipHash: { type: String },
+    requestId: { type: String },
+    result: { type: String, enum: ['SUCCESS', 'FAILURE', 'PENDING'], default: 'SUCCESS' },
     timestamp: { type: Date, default: Date.now }
   },
   { timestamps: false } // We use explicit timestamp field

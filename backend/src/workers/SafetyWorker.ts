@@ -3,6 +3,7 @@ import { SafetyEventService } from '../services/SafetyEventService';
 import { Message } from '../models/Message';
 import { MediaAsset } from '../models/MediaAsset';
 import mongoose from 'mongoose';
+import { runJobWithRetry } from '../utils/jobRunner';
 
 class SafetyWorker extends EventEmitter {
   private queue: any[] = [];
@@ -31,12 +32,20 @@ class SafetyWorker extends EventEmitter {
       const job = this.queue.shift();
       try {
         if (job.type === 'MESSAGE') {
-          await this.handleMessageJob(job);
+          runJobWithRetry(() => this.handleMessageJob(job), {
+            type: 'ai_safety_message',
+            payload: job,
+            maxRetries: 3
+          });
         } else if (job.type === 'MEDIA') {
-          await this.handleMediaJob(job);
+          runJobWithRetry(() => this.handleMediaJob(job), {
+            type: 'ai_safety_media',
+            payload: job,
+            maxRetries: 3
+          });
         }
       } catch (err) {
-        console.error('SafetyWorker error processing job:', err);
+        console.error('SafetyWorker queue error:', err);
       }
     }
 

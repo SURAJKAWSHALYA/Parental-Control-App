@@ -41,6 +41,31 @@ export const protect = async (req: AuthRequest, res: Response, next: NextFunctio
   }
 };
 
+export const optionalProtect = async (req: AuthRequest, res: Response, next: NextFunction) => {
+  let token;
+  if (
+    req.headers.authorization &&
+    req.headers.authorization.startsWith('Bearer')
+  ) {
+    try {
+      token = req.headers.authorization.split(' ')[1];
+      const decoded = jwt.verify(token, process.env.JWT_SECRET as string) as any;
+      const parent = await Parent.findById(decoded.id).select('-passwordHash');
+      if (parent) {
+        const userObj = parent.toObject();
+        req.user = {
+          ...userObj,
+          id: userObj._id,
+          familyId: userObj.familyId || userObj._id
+        };
+      }
+    } catch (error) {
+      // Ignore token errors for optional protect
+    }
+  }
+  next();
+};
+
 export const protectDevice = async (req: AuthRequest, res: Response, next: NextFunction) => {
   let token;
   if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {

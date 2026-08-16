@@ -1,0 +1,48 @@
+version: '3.8'
+
+services:
+  mongodb:
+    image: mongo:latest
+    container_name: parental_control_db
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USER:-admin}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD:-securepassword}
+    volumes:
+      - mongodb_data:/data/db
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: parental_control_backend
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - MONGODB_URI=mongodb://${MONGO_ROOT_USER:-admin}:${MONGO_ROOT_PASSWORD:-securepassword}@mongodb:27017/parental_control?authSource=admin
+      - JWT_SECRET=${JWT_SECRET:-changeme_in_production}
+      - CLIENT_URL=${CLIENT_URL:-http://localhost:80}
+    volumes:
+      - backend_uploads:/usr/src/app/uploads
+    depends_on:
+      - mongodb
+
+  frontend:
+    build:
+      context: ./parent-dashboard
+      dockerfile: Dockerfile
+    container_name: parental_control_frontend
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+
+volumes:
+  mongodb_data:
+  backend_uploads:

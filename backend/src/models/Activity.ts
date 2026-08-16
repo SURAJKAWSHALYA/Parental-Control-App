@@ -8,7 +8,8 @@ export interface IActivity extends Document {
   description: string;
   metadata?: any;
   isForeground?: boolean;
-  timestamp: Date;
+  clientTimestamp: Date;
+  serverTimestamp: Date;
 }
 
 const activitySchema = new Schema<IActivity>(
@@ -24,13 +25,14 @@ const activitySchema = new Schema<IActivity>(
     description: { type: String, required: true },
     metadata: { type: Schema.Types.Mixed },
     isForeground: { type: Boolean, default: true },
-    timestamp: { type: Date, default: Date.now }
+    clientTimestamp: { type: Date, default: Date.now },
+    serverTimestamp: { type: Date, default: Date.now }
   },
   { timestamps: true }
 );
 
 // Index for fetching recent activities per device rapidly
-activitySchema.index({ deviceId: 1, timestamp: -1 });
-activitySchema.index({ childId: 1, timestamp: -1 });
+activitySchema.index({ deviceId: 1, serverTimestamp: -1 });
+activitySchema.index({ childId: 1, serverTimestamp: -1 });
 
 export const Activity = mongoose.model<IActivity>('Activity', activitySchema);

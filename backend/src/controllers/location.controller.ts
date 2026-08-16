@@ -42,26 +42,27 @@ export const syncLocation = async (req: AuthRequest, res: Response) => {
       heading: r.heading,
       battery: r.battery,
       source: r.source || 'fused',
-      timestamp: new Date(r.timestamp)
+      clientTimestamp: new Date(r.timestamp),
+      serverTimestamp: new Date()
     })).filter(r => r.latitude >= -90 && r.latitude <= 90 && r.longitude >= -180 && r.longitude <= 180);
 
     if (validRecords.length > 0) {
       // Idempotency: filter out records with timestamps that already exist for this device
-      const timestamps = validRecords.map((r: any) => r.timestamp);
+      const timestamps = validRecords.map((r: any) => r.clientTimestamp);
       const existingRecords = await LocationRecord.find({
         deviceId: device._id,
-        timestamp: { $in: timestamps }
-      }).select('timestamp');
+        clientTimestamp: { $in: timestamps }
+      }).select('clientTimestamp');
       
-      const existingTimestamps = new Set(existingRecords.map(r => r.timestamp.getTime()));
-      const newRecords = validRecords.filter((r: any) => !existingTimestamps.has(r.timestamp.getTime()));
+      const existingTimestamps = new Set(existingRecords.map(r => r.clientTimestamp.getTime()));
+      const newRecords = validRecords.filter((r: any) => !existingTimestamps.has(r.clientTimestamp.getTime()));
 
       if (newRecords.length > 0) {
         await LocationRecord.insertMany(newRecords);
       }
       
       // Emit the latest one to parent if needed
-      const latest = validRecords.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())[0];
+      const latest = validRecords.sort((a, b) => b.clientTimestamp.getTime() - a.clientTimestamp.getTime())[0];
       const io = getIo();
       if (io) {
         const child = await Child.findById(device.childId);
@@ -86,7 +87,7 @@ export const getCurrentLocation = async (req: AuthRequest, res: Response) => {
     const device = await verifyDeviceOwnership(parentId, deviceId);
     if (!device) return sendError(res, 'Device not found or access denied', 'NOT_FOUND', 404);
 
-    const latestLocation = await LocationRecord.findOne({ deviceId }).sort({ timestamp: -1 });
+    const latestLocation = await LocationRecord.findOne({ deviceId }).sort({ serverTimestamp: -1 });
     sendSuccess(res, latestLocation, 'Current location fetched');
   } catch (error: any) {
     sendError(res, error.message);
@@ -109,14 +110,14 @@ export const getLocationHistory = async (req: AuthRequest, res: Response) => {
     
     const query: any = { deviceId };
     if (startDate || endDate) {
-      query.timestamp = {};
-      if (startDate) query.timestamp.$gte = new Date(startDate as string);
-      if (endDate) query.timestamp.$lte = new Date(endDate as string);
+      query.clientTimestamp = {};
+      if (startDate) query.clientTimestamp.$gte = new Date(startDate as string);
+      if (endDate) query.clientTimestamp.$lte = new Date(endDate as string);
     }
 
     const total = await LocationRecord.countDocuments(query);
     const history = await LocationRecord.find(query)
-      .sort({ timestamp: -1 })
+      .sort({ serverTimestamp: -1 })
       .skip((parsedPage - 1) * parsedLimit)
       .limit(parsedLimit);
 
@@ -146,9 +147,9 @@ export const deleteLocationHistory = async (req: AuthRequest, res: Response) => 
 
     const query: any = { deviceId };
     if (startDate || endDate) {
-      query.timestamp = {};
-      if (startDate) query.timestamp.$gte = new Date(startDate);
-      if (endDate) query.timestamp.$lte = new Date(endDate);
+      query.clientTimestamp = {};
+      if (startDate) query.clientTimestamp.$gte = new Date(startDate);
+      if (endDate) query.clientTimestamp.$lte = new Date(endDate);
     }
 
     const result = await LocationRecord.deleteMany(query);
