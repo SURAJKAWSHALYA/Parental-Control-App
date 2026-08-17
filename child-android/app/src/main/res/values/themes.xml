@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.FamilySafety" parent="Theme.Material3.DayNight">
+        <!-- Customize your light theme here. -->
+    </style>
+    <style name="Theme.FamilySafety.NoActionBar" parent="Theme.Material3.DayNight.NoActionBar">
+        <item name="windowActionBar">false</item>
+        <item name="windowNoTitle">true</item>
+    </style>
+</resources>

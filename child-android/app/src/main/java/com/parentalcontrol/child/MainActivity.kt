@@ -48,9 +48,14 @@ class MainActivity : ComponentActivity() {
                 ) {
                     var appState by remember { mutableStateOf(AppState.WELCOME) }
                     
-                                onContinue = { appState = AppState.HOME }
-                            )
-                        }
+                    when (appState) {
+                        AppState.WELCOME -> WelcomeScreen(onContinue = { appState = AppState.PAIRING })
+                        AppState.PAIRING -> PairingScreen(onPaired = { appState = AppState.PERMISSIONS })
+                        AppState.PERMISSIONS -> PermissionsScreen(
+                            onRequestLocation = { requestLocationPermission() },
+                            onRequestUsage = { /* TODO */ },
+                            onContinue = { appState = AppState.HOME }
+                        )
                         AppState.HOME -> HomeScreen()
                     }
                 }

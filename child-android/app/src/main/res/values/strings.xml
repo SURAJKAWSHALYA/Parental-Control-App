@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="accessibility_service_description">SafeNest Accessibility Service allows monitoring and blocking of restricted applications and websites to keep your device safe.</string>
+</resources>
