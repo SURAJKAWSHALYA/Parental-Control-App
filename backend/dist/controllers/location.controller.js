@@ -42,22 +42,23 @@ const syncLocation = async (req, res) => {
             heading: r.heading,
             battery: r.battery,
             source: r.source || 'fused',
-            timestamp: new Date(r.timestamp)
+            clientTimestamp: new Date(r.timestamp),
+            serverTimestamp: new Date()
         })).filter(r => r.latitude >= -90 && r.latitude <= 90 && r.longitude >= -180 && r.longitude <= 180);
         if (validRecords.length > 0) {
             // Idempotency: filter out records with timestamps that already exist for this device
-            const timestamps = validRecords.map((r) => r.timestamp);
+            const timestamps = validRecords.map((r) => r.clientTimestamp);
             const existingRecords = await LocationRecord_1.LocationRecord.find({
                 deviceId: device._id,
-                timestamp: { $in: timestamps }
-            }).select('timestamp');
-            const existingTimestamps = new Set(existingRecords.map(r => r.timestamp.getTime()));
-            const newRecords = validRecords.filter((r) => !existingTimestamps.has(r.timestamp.getTime()));
+                clientTimestamp: { $in: timestamps }
+            }).select('clientTimestamp');
+            const existingTimestamps = new Set(existingRecords.map(r => r.clientTimestamp.getTime()));
+            const newRecords = validRecords.filter((r) => !existingTimestamps.has(r.clientTimestamp.getTime()));
             if (newRecords.length > 0) {
                 await LocationRecord_1.LocationRecord.insertMany(newRecords);
             }
             // Emit the latest one to parent if needed
-            const latest = validRecords.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())[0];
+            const latest = validRecords.sort((a, b) => b.clientTimestamp.getTime() - a.clientTimestamp.getTime())[0];
             const io = (0, socketHandler_1.getIo)();
             if (io) {
                 const child = await Child_1.Child.findById(device.childId);
@@ -81,7 +82,7 @@ const getCurrentLocation = async (req, res) => {
         const device = await verifyDeviceOwnership(parentId, deviceId);
         if (!device)
             return (0, response_1.sendError)(res, 'Device not found or access denied', 'NOT_FOUND', 404);
-        const latestLocation = await LocationRecord_1.LocationRecord.findOne({ deviceId }).sort({ timestamp: -1 });
+        const latestLocation = await LocationRecord_1.LocationRecord.findOne({ deviceId }).sort({ serverTimestamp: -1 });
         (0, response_1.sendSuccess)(res, latestLocation, 'Current location fetched');
     }
     catch (error) {
@@ -103,15 +104,15 @@ const getLocationHistory = async (req, res) => {
         const parsedPage = Math.max(parseInt(page) || 1, 1);
         const query = { deviceId };
         if (startDate || endDate) {
-            query.timestamp = {};
+            query.clientTimestamp = {};
             if (startDate)
-                query.timestamp.$gte = new Date(startDate);
+                query.clientTimestamp.$gte = new Date(startDate);
             if (endDate)
-                query.timestamp.$lte = new Date(endDate);
+                query.clientTimestamp.$lte = new Date(endDate);
         }
         const total = await LocationRecord_1.LocationRecord.countDocuments(query);
         const history = await LocationRecord_1.LocationRecord.find(query)
-            .sort({ timestamp: -1 })
+            .sort({ serverTimestamp: -1 })
             .skip((parsedPage - 1) * parsedLimit)
             .limit(parsedLimit);
         (0, response_1.sendSuccess)(res, {
@@ -140,11 +141,11 @@ const deleteLocationHistory = async (req, res) => {
             return (0, response_1.sendError)(res, 'Device not found or access denied', 'NOT_FOUND', 404);
         const query = { deviceId };
         if (startDate || endDate) {
-            query.timestamp = {};
+            query.clientTimestamp = {};
             if (startDate)
-                query.timestamp.$gte = new Date(startDate);
+                query.clientTimestamp.$gte = new Date(startDate);
             if (endDate)
-                query.timestamp.$lte = new Date(endDate);
+                query.clientTimestamp.$lte = new Date(endDate);
         }
         const result = await LocationRecord_1.LocationRecord.deleteMany(query);
         (0, response_1.sendSuccess)(res, { deletedCount: result.deletedCount }, 'Location history deleted successfully');

@@ -5,6 +5,7 @@ const events_1 = require("events");
 const SafetyEventService_1 = require("../services/SafetyEventService");
 const Message_1 = require("../models/Message");
 const MediaAsset_1 = require("../models/MediaAsset");
+const jobRunner_1 = require("../utils/jobRunner");
 class SafetyWorker extends events_1.EventEmitter {
     queue = [];
     processing = false;
@@ -28,14 +29,22 @@ class SafetyWorker extends events_1.EventEmitter {
             const job = this.queue.shift();
             try {
                 if (job.type === 'MESSAGE') {
-                    await this.handleMessageJob(job);
+                    (0, jobRunner_1.runJobWithRetry)(() => this.handleMessageJob(job), {
+                        type: 'ai_safety_message',
+                        payload: job,
+                        maxRetries: 3
+                    });
                 }
                 else if (job.type === 'MEDIA') {
-                    await this.handleMediaJob(job);
+                    (0, jobRunner_1.runJobWithRetry)(() => this.handleMediaJob(job), {
+                        type: 'ai_safety_media',
+                        payload: job,
+                        maxRetries: 3
+                    });
                 }
             }
             catch (err) {
-                console.error('SafetyWorker error processing job:', err);
+                console.error('SafetyWorker queue error:', err);
             }
         }
         this.processing = false;

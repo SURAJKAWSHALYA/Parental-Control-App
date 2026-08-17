@@ -12,9 +12,14 @@ exports.apiLimiter = (0, express_rate_limit_1.default)({
     max: isProd ? 300 : 5000, // 300 in prod, 5000 in dev
     standardHeaders: true,
     legacyHeaders: false,
+    keyGenerator: (req) => {
+        if (req.user)
+            return req.user.id || req.user.deviceId || req.ip;
+        return req.ip;
+    },
     message: {
         success: false,
-        message: 'Too many requests from this IP, please try again after 15 minutes',
+        message: 'Too many requests, please try again after 15 minutes',
         errorCode: 'RATE_LIMIT_EXCEEDED'
     }
 });
@@ -24,6 +29,9 @@ exports.authLimiter = (0, express_rate_limit_1.default)({
     max: isProd ? 10 : 5000, // 10 attempts per hour in prod, 5000 in dev
     standardHeaders: true,
     legacyHeaders: false,
+    keyGenerator: (req) => {
+        return req.body.email || req.ip;
+    },
     message: {
         success: false,
         message: 'Too many authentication attempts, please try again after an hour',
@@ -36,6 +44,11 @@ exports.mediaLimiter = (0, express_rate_limit_1.default)({
     max: isProd ? 50 : 5000, // max 50 uploads per hour per IP in prod
     standardHeaders: true,
     legacyHeaders: false,
+    keyGenerator: (req) => {
+        if (req.user)
+            return req.user.id || req.user.deviceId || req.ip;
+        return req.ip;
+    },
     message: {
         success: false,
         message: 'Media upload quota exceeded, please try again later',

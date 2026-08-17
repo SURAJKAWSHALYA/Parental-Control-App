@@ -96,6 +96,10 @@ const deviceSchema = new mongoose_1.Schema({
         smsDays: { type: Number, default: 30 },
         safetyEventsDays: { type: Number, default: 90 },
     },
+    configurationVersion: {
+        type: Number,
+        default: 1,
+    },
 }, {
     timestamps: true,
 });

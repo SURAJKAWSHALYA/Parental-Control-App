@@ -12,12 +12,12 @@ export const requireRecentAuth = async (req: AuthRequest, res: Response, next: N
       return sendError(res, 'Password required for sensitive action', 'RE_AUTH_REQUIRED', 403);
     }
 
-    const parent = await Parent.findById(req.user._id).select('+password');
+    const parent = await Parent.findById(req.user._id).select('+passwordHash');
     if (!parent) {
       return sendError(res, 'User not found', 'NOT_FOUND', 404);
     }
 
-    const isMatch = await bcrypt.compare(password, parent.password);
+    const isMatch = await bcrypt.compare(password, parent.passwordHash);
     if (!isMatch) {
       return sendError(res, 'Incorrect password', 'INVALID_CREDENTIALS', 401);
     }

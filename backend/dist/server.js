@@ -13,6 +13,7 @@ const db_1 = require("./config/db");
 const rateLimiter_1 = require("./middleware/rateLimiter");
 const errorHandler_1 = require("./middleware/errorHandler");
 const requestId_middleware_1 = require("./middleware/requestId.middleware");
+const metrics_middleware_1 = require("./middleware/metrics.middleware");
 const socketHandler_1 = require("./sockets/socketHandler");
 // Routes
 const auth_routes_1 = __importDefault(require("./routes/auth.routes"));
@@ -74,6 +75,7 @@ app.use((0, helmet_1.default)());
 app.use((0, cors_1.default)({ origin: env_config_1.env.CLIENT_URL }));
 app.use(express_1.default.json());
 app.use(requestId_middleware_1.requestIdMiddleware);
+app.use(metrics_middleware_1.metricsMiddleware);
 // Apply rate limiter to all /api/ routes
 app.use('/api', rateLimiter_1.apiLimiter);
 // API Routes

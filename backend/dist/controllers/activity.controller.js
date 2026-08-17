@@ -10,6 +10,8 @@ const getActivity = async (req, res) => {
         const parentId = req.user._id;
         const { deviceId } = req.params;
         const { page = 1, limit = 50, type } = req.query;
+        const parsedLimit = Math.min(Number(limit) || 50, 100);
+        const parsedPage = Math.max(Number(page) || 1, 1);
         const children = await Child_1.Child.find({ parentId }).select('_id');
         const childIds = children.map(c => c._id);
         const device = await Device_1.Device.findOne({ _id: deviceId, childId: { $in: childIds } });
@@ -19,9 +21,9 @@ const getActivity = async (req, res) => {
         if (type)
             query.type = type;
         const activities = await Activity_1.Activity.find(query)
-            .sort({ timestamp: -1 })
-            .skip((Number(page) - 1) * Number(limit))
-            .limit(Number(limit));
+            .sort({ serverTimestamp: -1 })
+            .skip((parsedPage - 1) * parsedLimit)
+            .limit(parsedLimit);
         (0, response_1.sendSuccess)(res, activities, 'Activity fetched successfully');
     }
     catch (error) {

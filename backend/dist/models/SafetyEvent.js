@@ -51,6 +51,12 @@ const safetyEventSchema = new mongoose_1.Schema({
         required: true
     },
     confidence: { type: Number, required: true },
+    confidenceLevel: {
+        type: String,
+        enum: ['LOW', 'MEDIUM', 'HIGH'],
+        default: 'MEDIUM'
+    },
+    confidenceReason: { type: String },
     title: { type: String, required: true },
     description: { type: String, required: true },
     evidenceType: { type: String, required: true },

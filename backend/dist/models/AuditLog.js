@@ -44,6 +44,8 @@ const auditLogSchema = new mongoose_1.Schema({
     resourceId: { type: mongoose_1.Schema.Types.Mixed }, // Can be an ObjectId or string
     metadata: { type: mongoose_1.Schema.Types.Mixed },
     ipHash: { type: String },
+    requestId: { type: String },
+    result: { type: String, enum: ['SUCCESS', 'FAILURE', 'PENDING'], default: 'SUCCESS' },
     timestamp: { type: Date, default: Date.now }
 }, { timestamps: false } // We use explicit timestamp field
 );

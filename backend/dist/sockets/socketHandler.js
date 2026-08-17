@@ -10,6 +10,8 @@ const Child_1 = require("../models/Child");
 const CommandAudit_1 = require("../models/CommandAudit");
 const Alert_1 = require("../models/Alert");
 const Activity_1 = require("../models/Activity");
+const redis_adapter_1 = require("@socket.io/redis-adapter");
+const ioredis_1 = __importDefault(require("ioredis"));
 let ioInstance;
 // Basic in-memory rate limiting for sockets
 const commandRateLimits = new Map();
@@ -18,6 +20,11 @@ const getIo = () => ioInstance;
 exports.getIo = getIo;
 const setupSockets = (io) => {
     ioInstance = io;
+    if (process.env.REDIS_URL) {
+        const pubClient = new ioredis_1.default(process.env.REDIS_URL);
+        const subClient = pubClient.duplicate();
+        io.adapter((0, redis_adapter_1.createAdapter)(pubClient, subClient));
+    }
     // Middleware for authentication
     io.use(async (socket, next) => {
         try {

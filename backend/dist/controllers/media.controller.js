@@ -3,11 +3,14 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getMediaGallery = exports.deleteMedia = exports.getMediaStream = exports.uploadMedia = void 0;
+exports.getMediaGallery = exports.deleteMedia = exports.getMediaToken = exports.getMediaStream = exports.uploadMedia = void 0;
 const MediaAsset_1 = require("../models/MediaAsset");
 const Conversation_1 = require("../models/Conversation");
 const storage_service_1 = require("../services/storage.service");
 const path_1 = __importDefault(require("path"));
+const crypto_1 = __importDefault(require("crypto"));
+// In-memory token store for simplicity. In production, use Redis or DB with TTL.
+const mediaTokens = new Map();
 const uploadMedia = async (req, res) => {
     try {
         const { conversationId, senderType } = req.body; // senderType: 'Parent' | 'Child'
@@ -71,20 +74,34 @@ exports.uploadMedia = uploadMedia;
 const getMediaStream = async (req, res) => {
     try {
         const { id } = req.params;
+        const { token } = req.query;
         const mediaAsset = await MediaAsset_1.MediaAsset.findById(id);
         if (!mediaAsset) {
             res.status(404).json({ success: false, message: 'Media not found' });
             return;
         }
-        // Verify family ownership before streaming
-        const userId = (req.user.id || req.user.deviceId)?.toString();
-        const familyId = req.user.familyId?.toString();
-        // Check if the user is the uploader, or part of the same family
-        const isOwner = mediaAsset.uploaderId.toString() === userId ||
-            (familyId && mediaAsset.familyId.toString() === familyId);
-        if (!isOwner) {
-            res.status(403).json({ success: false, message: 'Not authorized to view this media' });
-            return;
+        if (token) {
+            // Validate short-lived token
+            const tokenData = mediaTokens.get(token);
+            if (!tokenData || tokenData.mediaId !== id || tokenData.expiresAt < Date.now()) {
+                res.status(403).json({ success: false, message: 'Invalid or expired media token' });
+                return;
+            }
+        }
+        else {
+            // Verify family ownership before streaming via standard JWT
+            if (!req.user) {
+                res.status(401).json({ success: false, message: 'Unauthorized' });
+                return;
+            }
+            const userId = (req.user.id || req.user.deviceId)?.toString();
+            const familyId = req.user.familyId?.toString();
+            const isOwner = mediaAsset.uploaderId.toString() === userId ||
+                (familyId && mediaAsset.familyId.toString() === familyId);
+            if (!isOwner) {
+                res.status(403).json({ success: false, message: 'Not authorized to view this media' });
+                return;
+            }
         }
         res.setHeader('Content-Type', mediaAsset.mimeType);
         const readStream = storage_service_1.StorageService.getFileStream(mediaAsset.storageKey);
@@ -96,6 +113,31 @@ const getMediaStream = async (req, res) => {
     }
 };
 exports.getMediaStream = getMediaStream;
+const getMediaToken = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const mediaAsset = await MediaAsset_1.MediaAsset.findById(id);
+        if (!mediaAsset) {
+            res.status(404).json({ success: false, message: 'Media not found' });
+            return;
+        }
+        const userId = (req.user.id || req.user.deviceId)?.toString();
+        const familyId = req.user.familyId?.toString();
+        const isOwner = mediaAsset.uploaderId.toString() === userId ||
+            (familyId && mediaAsset.familyId.toString() === familyId);
+        if (!isOwner) {
+            res.status(403).json({ success: false, message: 'Not authorized to view this media' });
+            return;
+        }
+        const token = crypto_1.default.randomBytes(32).toString('hex');
+        mediaTokens.set(token, { mediaId: id, expiresAt: Date.now() + 60000 }); // 1 minute TTL
+        res.json({ success: true, token });
+    }
+    catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+exports.getMediaToken = getMediaToken;
 const deleteMedia = async (req, res) => {
     try {
         const { id } = req.params;

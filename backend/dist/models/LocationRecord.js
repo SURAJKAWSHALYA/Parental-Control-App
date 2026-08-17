@@ -56,10 +56,11 @@ const LocationRecordSchema = new mongoose_1.Schema({
     heading: { type: Number },
     battery: { type: Number },
     source: { type: String, default: 'fused' }, // e.g., gps, network, fused
-    timestamp: { type: Date, required: true },
+    clientTimestamp: { type: Date, required: true },
+    serverTimestamp: { type: Date, default: Date.now },
 }, { timestamps: true });
 // Indexes for fast history querying
-LocationRecordSchema.index({ deviceId: 1, timestamp: -1 });
-LocationRecordSchema.index({ childId: 1, timestamp: -1 });
-LocationRecordSchema.index({ deviceId: 1, isGeofenceEvent: 1, timestamp: -1 });
+LocationRecordSchema.index({ deviceId: 1, serverTimestamp: -1 });
+LocationRecordSchema.index({ childId: 1, serverTimestamp: -1 });
+LocationRecordSchema.index({ deviceId: 1, isGeofenceEvent: 1, serverTimestamp: -1 });
 exports.LocationRecord = mongoose_1.default.model('LocationRecord', LocationRecordSchema);

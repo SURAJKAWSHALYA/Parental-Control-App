@@ -67,7 +67,7 @@ const inviteCoParent = async (req, res) => {
             role: 'CO_PARENT',
             permissions: permissions || ['VIEW_ONLY']
         });
-        await AuditService_1.AuditService.logAction(ownerId, req.user.id, req.user.role, 'INVITE_CO_PARENT', 'Parent', coParent._id.toString(), { email, permissions }, req.ip);
+        await AuditService_1.AuditService.logAction(ownerId, req.user.id, req.user.role, 'INVITE_CO_PARENT', 'Parent', coParent._id.toString(), { email, permissions }, req.ip, req.id);
         // Return the generated password ONCE so the owner can share it securely.
         (0, response_1.sendSuccess)(res, { id: coParent._id, email: coParent.email, role: coParent.role, temporaryPassword: generatedPassword }, 'Co-parent invited successfully');
     }
@@ -104,7 +104,7 @@ const updatePermissions = async (req, res) => {
         }
         member.permissions = permissions;
         await member.save();
-        await AuditService_1.AuditService.logAction(req.user.familyId, req.user.id, req.user.role, 'UPDATE_PERMISSIONS', 'Parent', member._id.toString(), { newPermissions: permissions }, req.ip);
+        await AuditService_1.AuditService.logAction(req.user.familyId, req.user.id, req.user.role, 'UPDATE_PERMISSIONS', 'Parent', member._id.toString(), { newPermissions: permissions }, req.ip, req.id);
         (0, response_1.sendSuccess)(res, member, 'Permissions updated successfully');
     }
     catch (error) {
@@ -133,7 +133,7 @@ const deleteFamilyData = async (req, res) => {
         await Device.deleteMany({ childId: { $in: childIds } });
         await Child.deleteMany({ parentId: familyId });
         // And so on for other collections...
-        await AuditService_1.AuditService.logAction(familyId, req.user.id, req.user.role, 'DELETE_FAMILY_DATA', 'Family', familyId, {}, req.ip);
+        await AuditService_1.AuditService.logAction(familyId, req.user.id, req.user.role, 'DELETE_FAMILY_DATA', 'Family', familyId, {}, req.ip, req.id);
         (0, response_1.sendSuccess)(res, {}, 'Family data scheduled for deletion');
     }
     catch (error) {

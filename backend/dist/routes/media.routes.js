@@ -30,10 +30,12 @@ const upload = (0, multer_1.default)({
         }
     }
 });
-// All media routes are protected
+// Optional auth for the stream route to allow token access
+router.get('/:id', auth_middleware_1.optionalProtect, media_controller_1.getMediaStream);
+// All other media routes are protected
 router.use(auth_middleware_1.protect);
 router.post('/upload', upload.single('media'), media_controller_1.uploadMedia);
 router.get('/gallery', media_controller_1.getMediaGallery);
-router.get('/:id', media_controller_1.getMediaStream);
+router.get('/:id/token', media_controller_1.getMediaToken);
 router.delete('/:id', media_controller_1.deleteMedia);
 exports.default = router;

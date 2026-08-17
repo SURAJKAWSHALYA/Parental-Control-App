@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.requirePermission = exports.protectDevice = exports.protect = void 0;
+exports.requirePermission = exports.protectDevice = exports.optionalProtect = exports.protect = void 0;
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const Parent_1 = require("../models/Parent");
 const response_1 = require("../utils/response");
@@ -36,6 +36,30 @@ const protect = async (req, res, next) => {
     }
 };
 exports.protect = protect;
+const optionalProtect = async (req, res, next) => {
+    let token;
+    if (req.headers.authorization &&
+        req.headers.authorization.startsWith('Bearer')) {
+        try {
+            token = req.headers.authorization.split(' ')[1];
+            const decoded = jsonwebtoken_1.default.verify(token, process.env.JWT_SECRET);
+            const parent = await Parent_1.Parent.findById(decoded.id).select('-passwordHash');
+            if (parent) {
+                const userObj = parent.toObject();
+                req.user = {
+                    ...userObj,
+                    id: userObj._id,
+                    familyId: userObj.familyId || userObj._id
+                };
+            }
+        }
+        catch (error) {
+            // Ignore token errors for optional protect
+        }
+    }
+    next();
+};
+exports.optionalProtect = optionalProtect;
 const protectDevice = async (req, res, next) => {
     let token;
     if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {

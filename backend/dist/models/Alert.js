@@ -44,7 +44,12 @@ const alertSchema = new mongoose_1.Schema({
     message: { type: String, required: true },
     severity: { type: String, required: true, enum: ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'] },
     isRead: { type: Boolean, default: false },
+    count: { type: Number, default: 1 },
+    lastOccurredAt: { type: Date, default: Date.now }
 }, {
     timestamps: true,
 });
+alertSchema.index({ parentId: 1, createdAt: -1 });
+alertSchema.index({ childId: 1, deviceId: 1, createdAt: -1 });
+alertSchema.index({ deviceId: 1, type: 1, isRead: 1 });
 exports.Alert = mongoose_1.default.model('Alert', alertSchema);

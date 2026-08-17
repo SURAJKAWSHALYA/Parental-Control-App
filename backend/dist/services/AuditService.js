@@ -10,7 +10,7 @@ class AuditService {
     /**
      * Logs a security or configuration action.
      */
-    static async logAction(familyId, actorId, actorRole, action, resourceType, resourceId, metadata, ipAddress) {
+    static async logAction(familyId, actorId, actorRole, action, resourceType, resourceId, metadata, ipAddress, requestId, result = 'SUCCESS') {
         try {
             // Create an IP hash instead of storing raw IP to respect privacy requirements
             const ipHash = ipAddress
@@ -25,6 +25,8 @@ class AuditService {
                 resourceId,
                 metadata,
                 ipHash,
+                requestId,
+                result,
                 timestamp: new Date()
             });
         }

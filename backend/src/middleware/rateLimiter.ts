@@ -8,8 +8,6 @@ export const apiLimiter = rateLimit({
   max: isProd ? 300 : 5000, // 300 in prod, 5000 in dev
   standardHeaders: true,
   legacyHeaders: false,
-  standardHeaders: true,
-  legacyHeaders: false,
   keyGenerator: (req: any) => {
     if (req.user) return req.user.id || req.user.deviceId || req.ip;
     return req.ip;
@@ -27,8 +25,6 @@ export const authLimiter = rateLimit({
   max: isProd ? 10 : 5000, // 10 attempts per hour in prod, 5000 in dev
   standardHeaders: true,
   legacyHeaders: false,
-  standardHeaders: true,
-  legacyHeaders: false,
   keyGenerator: (req: any) => {
     return req.body.email || req.ip;
   },
@@ -43,8 +39,6 @@ export const authLimiter = rateLimit({
 export const mediaLimiter = rateLimit({
   windowMs: 60 * 60 * 1000,
   max: isProd ? 50 : 5000, // max 50 uploads per hour per IP in prod
-  standardHeaders: true,
-  legacyHeaders: false,
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator: (req: any) => {

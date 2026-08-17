@@ -11,8 +11,8 @@ const Placeholder = ({ title }: { title: string }) => {
       </div>
       <h2 className="text-3xl font-bold text-white mb-3 text-center">{title}</h2>
       <p className="text-neutral-400 text-center max-w-md mb-8">
-        This feature is part of the advanced monitoring capabilities and is scheduled for implementation in 
-        <span className="text-blue-400 font-medium ml-1">Phase 2</span>.
+        This feature is part of our extended capabilities and is scheduled for a 
+        <span className="text-blue-400 font-medium ml-1">future update</span>.
       </p>
       
       <button 

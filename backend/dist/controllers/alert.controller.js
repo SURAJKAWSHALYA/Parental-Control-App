@@ -6,8 +6,23 @@ const response_1 = require("../utils/response");
 const getAlerts = async (req, res) => {
     try {
         const parentId = req.user._id;
-        const alerts = await Alert_1.Alert.find({ parentId }).sort({ createdAt: -1 }).limit(100);
-        (0, response_1.sendSuccess)(res, alerts, 'Alerts fetched successfully');
+        const { page = 1, limit = 50 } = req.query;
+        const parsedLimit = Math.min(Number(limit) || 50, 100);
+        const parsedPage = Math.max(Number(page) || 1, 1);
+        const alerts = await Alert_1.Alert.find({ parentId })
+            .sort({ createdAt: -1 })
+            .skip((parsedPage - 1) * parsedLimit)
+            .limit(parsedLimit);
+        const total = await Alert_1.Alert.countDocuments({ parentId });
+        (0, response_1.sendSuccess)(res, {
+            data: alerts,
+            pagination: {
+                total,
+                page: parsedPage,
+                limit: parsedLimit,
+                totalPages: Math.ceil(total / parsedLimit)
+            }
+        }, 'Alerts fetched successfully');
     }
     catch (error) {
         (0, response_1.sendError)(res, error.message);

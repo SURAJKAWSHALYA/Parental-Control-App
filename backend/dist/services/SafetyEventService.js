@@ -47,6 +47,8 @@ class SafetyEventService {
             category: classification.category,
             severity: classification.severity,
             confidence: classification.confidence,
+            confidenceLevel: classification.confidence >= 80 ? 'HIGH' : classification.confidence >= 50 ? 'MEDIUM' : 'LOW',
+            confidenceReason: `AI model reported a confidence score of ${classification.confidence}%.`,
             title,
             description: description.substring(0, 200), // Preview only
             evidenceType,
