@@ -54,12 +54,33 @@ class SyncWorker(
             // 2. Upload Pending Locations
             val pendingLocations = locationDao.getPendingLocations(100)
             if (pendingLocations.isNotEmpty()) {
-                // TODO: POST /api/location/sync
-                val success = true // Simulated success
-                if (success) {
-                    val idsToRemove = pendingLocations.map { it.id }
-                    // Simulate delete
-                    // locationDao.deleteLocations(idsToRemove)
+                val prefs = applicationContext.getSharedPreferences("auth", Context.MODE_PRIVATE)
+                val token = prefs.getString("token", null)
+                val deviceId = prefs.getString("deviceId", null)
+                
+                if (token != null && deviceId != null) {
+                    val requestData = mapOf(
+                        "deviceId" to deviceId,
+                        "records" to pendingLocations.map { loc ->
+                            mapOf(
+                                "latitude" to loc.latitude,
+                                "longitude" to loc.longitude,
+                                "accuracy" to loc.accuracy,
+                                "altitude" to loc.altitude,
+                                "speed" to loc.speed,
+                                "heading" to loc.heading,
+                                "battery" to loc.battery,
+                                "source" to loc.source,
+                                "timestamp" to loc.timestamp
+                            )
+                        }
+                    )
+                    
+                    val success = com.parentalcontrol.child.network.ApiClient.syncLocation(token, requestData)
+                    if (success) {
+                        val idsToRemove = pendingLocations.map { it.id }
+                        locationDao.deleteLocations(idsToRemove)
+                    }
                 }
             }
 

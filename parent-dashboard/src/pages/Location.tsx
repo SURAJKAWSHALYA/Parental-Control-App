@@ -330,7 +330,7 @@ const Location = () => {
                     ) : (
                         <div className="flex flex-col items-center justify-center h-full text-gray-500">
                             <MapPin className="w-12 h-12 text-gray-300 mb-2" />
-                            <p>No location data available.</p>
+                            <p>Location unavailable</p>
                         </div>
                     )}
                 </div>

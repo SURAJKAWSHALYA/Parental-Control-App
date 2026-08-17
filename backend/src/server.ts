@@ -62,17 +62,19 @@ if (process.env.NODE_ENV !== 'test') {
 const app = express();
 const server = http.createServer(app);
 
+const allowedOrigins = env.ALLOWED_ORIGINS.split(',').map(o => o.trim());
+
 // Socket.io for Real-time communication (Phase 2 mostly, but setup here)
 const io = new Server(server, {
   cors: {
-    origin: env.CLIENT_URL,
+    origin: allowedOrigins,
     methods: ['GET', 'POST']
   }
 });
 
 // Middleware
 app.use(helmet());
-app.use(cors({ origin: env.CLIENT_URL }));
+app.use(cors({ origin: allowedOrigins }));
 app.use(express.json());
 app.use(requestIdMiddleware);
 app.use(metricsMiddleware);
@@ -125,8 +127,8 @@ if (process.env.NODE_ENV !== 'test') {
   // Start background jobs
   startDataRetentionCron();
 
-  server.listen(PORT, () => {
-    console.log(`Server running in ${env.NODE_ENV} mode on port ${PORT}`);
+  server.listen(parseInt(PORT, 10), '0.0.0.0', () => {
+    console.log(`Server running in ${env.NODE_ENV} mode on port ${PORT} (0.0.0.0)`);
   });
 }
 

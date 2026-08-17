@@ -10,7 +10,7 @@ const envSchema = z.object({
   MONGODB_URI: z.string().url().default('mongodb://127.0.0.1:27017/parental_control'),
   JWT_SECRET: z.string().min(1, 'JWT_SECRET is required'),
   JWT_REFRESH_SECRET: z.string().min(1).optional(),
-  CLIENT_URL: z.string().url().default('http://localhost:5173'),
+  ALLOWED_ORIGINS: z.string().default('http://localhost:5173,http://localhost:3000'),
   SOCKET_SECRET: z.string().optional(),
   STORAGE_ENDPOINT: z.string().optional(),
   STORAGE_BUCKET: z.string().optional(),

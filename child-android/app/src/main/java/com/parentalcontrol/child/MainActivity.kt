@@ -1,6 +1,8 @@
 package com.parentalcontrol.child
 
 import android.Manifest
+import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
@@ -21,10 +23,15 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.rememberScrollState
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
-
+import com.parentalcontrol.child.network.SocketManager
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 class MainActivity : ComponentActivity() {
     
     // Simplistic state management for the wizard steps
@@ -40,26 +47,44 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         
+        val tokenManager = com.parentalcontrol.child.utils.TokenManager(this)
+        val startState = if (tokenManager.isPaired()) AppState.HOME else AppState.WELCOME
+        
         setContent {
             MaterialTheme {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    var appState by remember { mutableStateOf(AppState.WELCOME) }
+                    var appState by remember { mutableStateOf(startState) }
                     
                     when (appState) {
                         AppState.WELCOME -> WelcomeScreen(onContinue = { appState = AppState.PAIRING })
                         AppState.PAIRING -> PairingScreen(onPaired = { appState = AppState.PERMISSIONS })
                         AppState.PERMISSIONS -> PermissionsScreen(
-                            onRequestLocation = { requestLocationPermission() },
-                            onRequestUsage = { /* TODO */ },
-                            onContinue = { appState = AppState.HOME }
+                            onContinue = { 
+                                appState = AppState.HOME
+                                startTrackingService()
+                            }
                         )
-                        AppState.HOME -> HomeScreen()
+                        AppState.HOME -> {
+                            LaunchedEffect(Unit) {
+                                startTrackingService()
+                            }
+                            HomeScreen()
+                        }
                     }
                 }
             }
+        }
+    }
+
+    private fun startTrackingService() {
+        val intent = Intent(this, com.parentalcontrol.child.services.LocationTrackerService::class.java)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            ContextCompat.startForegroundService(this, intent)
+        } else {
+            startService(intent)
         }
     }
 
@@ -76,6 +101,13 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun WelcomeScreen(onContinue: () -> Unit) {
+    var isServerAvailable by remember { mutableStateOf<Boolean?>(null) }
+    val coroutineScope = rememberCoroutineScope()
+
+    LaunchedEffect(Unit) {
+        isServerAvailable = com.parentalcontrol.child.network.ApiClient.checkHealth()
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -96,12 +128,29 @@ fun WelcomeScreen(onContinue: () -> Unit) {
             fontSize = 18.sp,
             modifier = Modifier.padding(bottom = 48.dp)
         )
+        
+        if (isServerAvailable == false) {
+            Text(
+                text = "Server unavailable. Please check your network or backend URL.",
+                color = MaterialTheme.colorScheme.error,
+                modifier = Modifier.padding(bottom = 16.dp),
+                textAlign = TextAlign.Center
+            )
+        }
+
         Button(
             onClick = onContinue,
             modifier = Modifier.fillMaxWidth().height(56.dp),
-            shape = RoundedCornerShape(12.dp)
+            shape = RoundedCornerShape(12.dp),
+            enabled = isServerAvailable == true
         ) {
-            Text("Continue", fontSize = 18.sp)
+            if (isServerAvailable == null) {
+                CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.White)
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Connecting...", fontSize = 18.sp)
+            } else {
+                Text("Continue", fontSize = 18.sp)
+            }
         }
     }
 }
@@ -110,7 +159,9 @@ fun WelcomeScreen(onContinue: () -> Unit) {
 fun PairingScreen(onPaired: () -> Unit) {
     var pairingCode by remember { mutableStateOf("") }
     var isLoading by remember { mutableStateOf(false) }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
     val coroutineScope = rememberCoroutineScope()
+    val context = LocalContext.current
 
     Column(
         modifier = Modifier
@@ -132,20 +183,64 @@ fun PairingScreen(onPaired: () -> Unit) {
         )
         OutlinedTextField(
             value = pairingCode,
-            onValueChange = { if (it.length <= 6) pairingCode = it.uppercase() },
+            onValueChange = { 
+                if (it.length <= 6) pairingCode = it.uppercase()
+                errorMessage = null
+            },
             label = { Text("Pairing Code") },
-            modifier = Modifier.fillMaxWidth().padding(bottom = 32.dp),
-            singleLine = true
+            modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+            singleLine = true,
+            isError = errorMessage != null
         )
+        if (errorMessage != null) {
+            Text(
+                text = errorMessage!!,
+                color = MaterialTheme.colorScheme.error,
+                style = MaterialTheme.typography.bodySmall,
+                modifier = Modifier.padding(bottom = 24.dp)
+            )
+        } else {
+            Spacer(modifier = Modifier.height(32.dp))
+        }
+        
         Button(
             onClick = {
                 if (pairingCode.length == 6) {
                     isLoading = true
+                    errorMessage = null
                     coroutineScope.launch {
-                        // Mock API Call delay
-                        delay(1500)
-                        isLoading = false
-                        onPaired()
+                        val isHealthy = com.parentalcontrol.child.network.ApiClient.checkHealth()
+                        if (!isHealthy) {
+                            errorMessage = "Server unavailable. Please check your connection."
+                            isLoading = false
+                            return@launch
+                        }
+                        try {
+                            val request = com.parentalcontrol.child.network.ApiClient.PairingRequest(
+                                code = pairingCode,
+                                deviceName = Build.MODEL ?: "Unknown Device",
+                                androidVersion = Build.VERSION.RELEASE ?: "Unknown",
+                                manufacturer = Build.MANUFACTURER ?: "Unknown",
+                                deviceModel = Build.MODEL ?: "Unknown",
+                                appVersion = "1.0.0",
+                                batteryLevel = getBatteryLevel(context)
+                            )
+                            val response = com.parentalcontrol.child.network.ApiClient.pairDevice(request)
+                            val tokenManager = com.parentalcontrol.child.utils.TokenManager(context)
+                            tokenManager.saveAuthData(response.deviceId, response.token)
+                            isLoading = false
+                            onPaired()
+                        } catch (e: com.parentalcontrol.child.network.ApiClient.ApiException) {
+                            isLoading = false
+                            errorMessage = when (e.errorCode) {
+                                "INVALID_CODE" -> "That pairing code is invalid or has expired."
+                                "VALIDATION_ERROR" -> "Please enter a valid pairing code."
+                                else -> e.message ?: "Failed to connect to server."
+                            }
+                        } catch (e: Exception) {
+                            isLoading = false
+                            errorMessage = "Network error. Please try again."
+                        }
                     }
                 }
             },
@@ -162,52 +257,102 @@ fun PairingScreen(onPaired: () -> Unit) {
     }
 }
 
+fun getBatteryLevel(context: android.content.Context): Int {
+    val batteryStatus = android.content.IntentFilter(android.content.Intent.ACTION_BATTERY_CHANGED).let { ifilter ->
+        context.registerReceiver(null, ifilter)
+    }
+    val level = batteryStatus?.getIntExtra(android.os.BatteryManager.EXTRA_LEVEL, -1) ?: -1
+    val scale = batteryStatus?.getIntExtra(android.os.BatteryManager.EXTRA_SCALE, -1) ?: -1
+    return if (level != -1 && scale != -1) {
+        (level * 100 / scale.toFloat()).toInt()
+    } else {
+        100
+    }
+}
+
 @Composable
-fun PermissionsScreen(onRequestLocation: () -> Unit, onRequestUsage: () -> Unit, onContinue: () -> Unit) {
+fun PermissionsScreen(onContinue: () -> Unit) {
+    val context = LocalContext.current
+    val permissionManager = remember { PermissionManager(context) }
+    
+    var hasLocation by remember { mutableStateOf(ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) }
+    var hasBackgroundLocation by remember { mutableStateOf(if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_BACKGROUND_LOCATION) == PackageManager.PERMISSION_GRANTED else true) }
+    var hasCamera by remember { mutableStateOf(ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) }
+    var hasMic by remember { mutableStateOf(ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) }
+    var hasUsage by remember { mutableStateOf(permissionManager.hasUsageAccessPermission()) }
+    var hasAccessibility by remember { mutableStateOf(permissionManager.isAccessibilityServiceEnabled()) }
+    var hasNotification by remember { mutableStateOf(permissionManager.isNotificationAccessGranted()) }
+
+    val lifecycleOwner = androidx.compose.ui.platform.LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
+                hasLocation = ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
+                hasBackgroundLocation = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_BACKGROUND_LOCATION) == PackageManager.PERMISSION_GRANTED else true
+                hasCamera = ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED
+                hasMic = ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
+                hasUsage = permissionManager.hasUsageAccessPermission()
+                hasAccessibility = permissionManager.isAccessibilityServiceEnabled()
+                hasNotification = permissionManager.isNotificationAccessGranted()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+
+    val launcher = androidx.activity.compose.rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
+        hasLocation = ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
+        hasBackgroundLocation = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_BACKGROUND_LOCATION) == PackageManager.PERMISSION_GRANTED else true
+        hasCamera = ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED
+        hasMic = ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(24.dp),
+            .padding(24.dp)
+            .verticalScroll(rememberScrollState()),
         horizontalAlignment = Alignment.Start
     ) {
         Text(
-            text = "Device Permissions",
+            text = "Permissions & Setup",
             fontSize = 28.sp,
             fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(bottom = 16.dp, top = 48.dp)
+            modifier = Modifier.padding(bottom = 16.dp, top = 24.dp)
         )
         Text(
-            text = "The following Android permissions may be required for parental-control features. Only grant what is needed.",
-            modifier = Modifier.padding(bottom = 32.dp)
+            text = "The following Android permissions are required for monitoring.",
+            modifier = Modifier.padding(bottom = 24.dp)
         )
-        
-        Card(
-            modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
-            colors = CardDefaults.cardColors(containerColor = Color(0xFFF5F5F5))
-        ) {
-            Column(modifier = Modifier.padding(16.dp)) {
-                Text("Location", fontWeight = FontWeight.Bold, fontSize = 18.sp, modifier = Modifier.padding(bottom = 8.dp))
-                Text("Used for location sharing and geofence alerts.", color = Color.Gray, modifier = Modifier.padding(bottom = 16.dp))
-                Button(onClick = onRequestLocation) {
-                    Text("Allow Location")
-                }
+
+        PermissionRow("Location", if (hasLocation) "GRANTED" else "NOT GRANTED", hasLocation) {
+            launcher.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION))
+        }
+        PermissionRow("Background Location", if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) "NOT REQUIRED" else if (hasBackgroundLocation) "GRANTED" else "NOT GRANTED", hasBackgroundLocation) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                launcher.launch(arrayOf(Manifest.permission.ACCESS_BACKGROUND_LOCATION))
             }
         }
-        
-        Card(
-            modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
-            colors = CardDefaults.cardColors(containerColor = Color(0xFFF5F5F5))
-        ) {
-            Column(modifier = Modifier.padding(16.dp)) {
-                Text("Usage Access", fontWeight = FontWeight.Bold, fontSize = 18.sp, modifier = Modifier.padding(bottom = 8.dp))
-                Text("Required to monitor application screen time.", color = Color.Gray, modifier = Modifier.padding(bottom = 16.dp))
-                Button(onClick = onRequestUsage) {
-                    Text("Open Settings")
-                }
-            }
+        PermissionRow("Usage Access", if (hasUsage) "GRANTED" else "NOT GRANTED", hasUsage) {
+            context.startActivity(permissionManager.getUsageAccessSettingsIntent())
+        }
+        PermissionRow("Accessibility", if (hasAccessibility) "ENABLED" else "DISABLED", hasAccessibility) {
+            context.startActivity(permissionManager.getAccessibilitySettingsIntent())
+        }
+        PermissionRow("Notification Access", if (hasNotification) "GRANTED" else "NOT GRANTED", hasNotification) {
+            context.startActivity(permissionManager.getNotificationAccessSettingsIntent())
+        }
+        PermissionRow("Screen Capture", "NOT GRANTED / SESSION NOT ACTIVE", false) {
+            // No intent, needs active session
+        }
+        PermissionRow("Camera", if (hasCamera) "GRANTED" else "NOT GRANTED", hasCamera) {
+            launcher.launch(arrayOf(Manifest.permission.CAMERA))
+        }
+        PermissionRow("Microphone", if (hasMic) "GRANTED" else "NOT GRANTED", hasMic) {
+            launcher.launch(arrayOf(Manifest.permission.RECORD_AUDIO))
         }
 
-        Spacer(modifier = Modifier.weight(1f))
+        Spacer(modifier = Modifier.height(24.dp))
         
         Button(
             onClick = onContinue,
@@ -215,6 +360,37 @@ fun PermissionsScreen(onRequestLocation: () -> Unit, onRequestUsage: () -> Unit,
             shape = RoundedCornerShape(12.dp)
         ) {
             Text("Finish Setup", fontSize = 18.sp)
+        }
+        Spacer(modifier = Modifier.height(24.dp))
+    }
+}
+
+@Composable
+fun PermissionRow(title: String, status: String, isGranted: Boolean, onClick: () -> Unit) {
+    Card(
+        modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
+        colors = CardDefaults.cardColors(containerColor = Color(0xFFF5F5F5))
+    ) {
+        Row(
+            modifier = Modifier.padding(16.dp).fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(title, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                Text(
+                    status,
+                    color = if (status.contains("NOT REQUIRED")) Color.Gray else if (isGranted) Color(0xFF2E7D32) else Color.Red,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(top = 4.dp)
+                )
+            }
+            if (!isGranted && !status.contains("NOT REQUIRED") && !status.contains("SESSION NOT ACTIVE")) {
+                Button(onClick = onClick) {
+                    Text("Enable")
+                }
+            }
         }
     }
 }
@@ -229,13 +405,21 @@ fun HomeScreen() {
     var hasUsagePermission by remember { mutableStateOf(permissionManager.hasUsageAccessPermission()) }
     var screenTimeStr by remember { mutableStateOf("Calculating...") }
 
+    val connectionState by SocketManager.connectionState.collectAsState()
+
     LaunchedEffect(Unit) {
-        // Mock background Socket.IO connection and Heartbeat
+        SocketManager.init(context)
+        
         launch {
             while(isActive) {
-                lastHeartbeat = "Just now"
+                if (SocketManager.connectionState.value == "CONNECTED") {
+                    val battery = getBatteryLevel(context)
+                    SocketManager.emitHeartbeat(battery)
+                    val format = SimpleDateFormat("hh:mm a", Locale.getDefault())
+                    lastHeartbeat = format.format(Date())
+                }
                 hasUsagePermission = permissionManager.hasUsageAccessPermission()
-                delay(15000) // Send heartbeat every 15 seconds in this mock
+                delay(15000) // Send heartbeat every 15 seconds
             }
         }
         
@@ -273,13 +457,26 @@ fun HomeScreen() {
             modifier = Modifier.padding(top = 24.dp, bottom = 32.dp)
         )
 
+        val statusColor = when(connectionState) {
+            "CONNECTED" -> Color(0xFF2E7D32)
+            "CONNECTING" -> Color(0xFFF57F17)
+            "ERROR" -> Color.Red
+            else -> Color.Gray
+        }
+        val statusText = when(connectionState) {
+            "CONNECTED" -> "🟢 Connected"
+            "CONNECTING" -> "🟡 Connecting..."
+            "ERROR" -> "🔴 Error"
+            else -> "⚫ Disconnected"
+        }
+
         Card(
             modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
             colors = CardDefaults.cardColors(containerColor = Color(0xFFE8F5E9))
         ) {
                 Row(modifier = Modifier.padding(16.dp).fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 Text("Device Status", fontWeight = FontWeight.Medium)
-                Text("🟢 Connected", fontWeight = FontWeight.Bold, color = Color(0xFF2E7D32))
+                Text(statusText, fontWeight = FontWeight.Bold, color = statusColor)
             }
             Text("Last heartbeat: $lastHeartbeat", fontSize = 10.sp, color = Color.Gray, modifier = Modifier.padding(start = 16.dp, bottom = 8.dp))
         }

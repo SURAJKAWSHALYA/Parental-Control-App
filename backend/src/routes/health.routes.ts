@@ -11,4 +11,9 @@ const router = Router();
 // We will just protect it entirely.
 router.get('/', protect, getSystemHealth);
 
+// Simple ping endpoint for connectivity checks (e.g., from Android app)
+router.get('/ping', (req, res) => {
+  res.status(200).json({ status: 'ok' });
+});
+
 export default router;

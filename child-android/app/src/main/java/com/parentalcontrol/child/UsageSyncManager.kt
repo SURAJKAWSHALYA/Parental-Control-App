@@ -1,8 +1,9 @@
 package com.parentalcontrol.child
 
 import android.content.Context
-// Stub imports for WorkManager and Retrofit/API
 import android.util.Log
+import com.parentalcontrol.child.network.ApiClient
+import com.parentalcontrol.child.utils.TokenManager
 import java.util.Calendar
 import java.text.SimpleDateFormat
 import java.util.Locale
@@ -43,8 +44,20 @@ class UsageSyncManager(private val context: Context) {
             )
         }
 
-        // Mock API call to /api/app-usage/sync
+        val tokenManager = TokenManager(context)
+        val token = tokenManager.getToken()
+        
+        if (token.isNullOrEmpty()) {
+            Log.e("UsageSync", "No token found. Skipping sync.")
+            return
+        }
+
         Log.i("UsageSync", "Syncing ${payload.size} apps usage to backend")
-        // api.syncUsage(mapOf("usageData" to payload))
+        val success = ApiClient.syncUsage(token, mapOf("usageData" to payload))
+        if (success) {
+            Log.i("UsageSync", "Sync successful")
+        } else {
+            Log.e("UsageSync", "Sync failed")
+        }
     }
 }

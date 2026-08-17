@@ -34,10 +34,12 @@ android {
             shrinkResources true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
             signingConfig signingConfigs.release
+            buildConfigField "String", "BASE_URL", "\"${System.getenv('API_BASE_URL') ?: 'https://api.example.com/api/'}\""
         }
         debug {
             applicationIdSuffix ".debug"
             debuggable true
+            buildConfigField "String", "BASE_URL", "\"${System.getenv('API_BASE_URL') ?: 'http://192.168.43.50:5000/api/'}\""
         }
     }
     compileOptions {
@@ -49,6 +51,7 @@ android {
     }
     buildFeatures {
         compose true
+        buildConfig true
     }
     composeOptions {
         kotlinCompilerExtensionVersion = "1.5.0"
@@ -70,6 +73,9 @@ dependencies {
     
     // Play Services Location
     implementation 'com.google.android.gms:play-services-location:21.0.1'
+    
+    // Security Crypto
+    implementation 'androidx.security:security-crypto:1.1.0-alpha06'
     
     // Room
     def room_version = "2.6.1"

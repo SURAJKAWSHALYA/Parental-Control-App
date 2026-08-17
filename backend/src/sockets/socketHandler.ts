@@ -173,12 +173,17 @@ export const setupSockets = (io: Server) => {
     // Location Events
     socket.on('location:updated', async (data) => {
       if (socket.user?.role === 'device') {
-        const device = await Device.findById(socket.user.deviceId);
-        if (device) {
-           const child = await Child.findById(device.childId);
-           if (child) {
-             io.to(`parent_${child.parentId}`).emit('location:updated', { deviceId: device._id, ...data });
-           }
+        // Validate coordinates
+        if (data && typeof data.latitude === 'number' && typeof data.longitude === 'number') {
+            if (data.latitude >= -90 && data.latitude <= 90 && data.longitude >= -180 && data.longitude <= 180) {
+                const device = await Device.findById(socket.user.deviceId);
+                if (device) {
+                   const child = await Child.findById(device.childId);
+                   if (child) {
+                     io.to(`parent_${child.parentId}`).emit('location:updated', { deviceId: device._id, ...data });
+                   }
+                }
+            }
         }
       }
     });

@@ -32,7 +32,13 @@
         <activity
             android:name=".ui.WebsiteRestrictedActivity"
             android:theme="@style/Theme.FamilySafety.NoActionBar"
+            android:exported="false"
             android:excludeFromRecents="true" />
+
+        <activity
+            android:name=".ui.FamilyChatActivity"
+            android:theme="@style/Theme.FamilySafety.NoActionBar"
+            android:exported="false" />
             
         <service
             android:name=".services.BrowserAccessibilityService"
