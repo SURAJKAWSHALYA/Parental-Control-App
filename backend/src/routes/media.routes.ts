@@ -28,14 +28,13 @@ const upload = multer({
   }
 });
 
-// Optional auth for the stream route to allow token access
+router.get('/gallery', protect, getMediaGallery);
 router.get('/:id', optionalProtect, getMediaStream);
 
 // All other media routes are protected
 router.use(protect);
 
 router.post('/upload', upload.single('media'), uploadMedia);
-router.get('/gallery', getMediaGallery);
 router.get('/:id/token', getMediaToken);
 router.delete('/:id', deleteMedia);
 

@@ -44,9 +44,31 @@ class MainActivity : ComponentActivity() {
             // In a real app we'd update state based on this result
         }
 
+    private val screenCaptureLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        if (result.resultCode == android.app.Activity.RESULT_OK) {
+            val serviceIntent = Intent(this, com.parentalcontrol.child.services.ScreenCaptureService::class.java).apply {
+                putExtra(com.parentalcontrol.child.services.ScreenCaptureService.EXTRA_RESULT_CODE, result.resultCode)
+                putExtra(com.parentalcontrol.child.services.ScreenCaptureService.EXTRA_RESULT_DATA, result.data)
+            }
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                ContextCompat.startForegroundService(this, serviceIntent)
+            } else {
+                startService(serviceIntent)
+            }
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         
+        com.parentalcontrol.child.network.SocketManager.on("screen:session:request") {
+            runOnUiThread {
+                val projectionManager = getSystemService(Context.MEDIA_PROJECTION_SERVICE) as android.media.projection.MediaProjectionManager
+                val intent = projectionManager.createScreenCaptureIntent()
+                screenCaptureLauncher.launch(intent)
+            }
+        }
+
         val tokenManager = com.parentalcontrol.child.utils.TokenManager(this)
         val startState = if (tokenManager.isPaired()) AppState.HOME else AppState.WELCOME
         

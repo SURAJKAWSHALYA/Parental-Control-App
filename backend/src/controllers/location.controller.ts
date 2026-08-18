@@ -59,6 +59,9 @@ export const syncLocation = async (req: AuthRequest, res: Response) => {
 
       if (newRecords.length > 0) {
         await LocationRecord.insertMany(newRecords);
+        console.log(`LOCATION_DEBUG [REST] Uploaded ${newRecords.length} locations for device ${device._id}. Latest TS: ${newRecords[newRecords.length-1].clientTimestamp}`);
+      } else {
+        console.log(`LOCATION_DEBUG [REST] Location upload successful but 0 new records for device ${device._id} (all existed).`);
       }
       
       // Emit the latest one to parent if needed
@@ -70,10 +73,13 @@ export const syncLocation = async (req: AuthRequest, res: Response) => {
           io.to(`parent_${child.parentId}`).emit('location:updated', { deviceId: device._id, location: latest });
         }
       }
+    } else {
+      console.log(`LOCATION_DEBUG [REST] Location upload for device ${device._id} contained 0 valid records.`);
     }
 
     sendSuccess(res, { syncedCount: validRecords.length }, 'Locations synced successfully');
   } catch (error: any) {
+    console.log(`LOCATION_DEBUG [REST] Location upload failed: ${error.message}`);
     sendError(res, error.message);
   }
 };

@@ -7,6 +7,7 @@ import { Alert } from '../models/Alert';
 import { Activity } from '../models/Activity';
 import { createAdapter } from '@socket.io/redis-adapter';
 import Redis from 'ioredis';
+import { SafetyAnalyzerService } from '../services/SafetyAnalyzerService';
 
 interface AuthSocket extends Socket {
   user?: any; // parent or device object
@@ -43,7 +44,8 @@ export const setupSockets = (io: Server) => {
         socket.user = { role: 'parent', parentId: decoded.id };
       }
       next();
-    } catch (error) {
+    } catch (error: any) {
+      console.error('Socket auth error:', error.message, 'Token was:', socket.handshake.auth.token);
       next(new Error('Authentication error: Invalid token'));
     }
   });
@@ -180,10 +182,25 @@ export const setupSockets = (io: Server) => {
                 if (device) {
                    const child = await Child.findById(device.childId);
                    if (child) {
-                     io.to(`parent_${child.parentId}`).emit('location:updated', { deviceId: device._id, ...data });
+                     console.log(`LOCATION_DEBUG [Socket] Location update for device ${device._id} successful. Timestamp: ${data.timestamp}`);
+                     io.to(`parent_${child.parentId}`).emit('location:updated', { 
+                       deviceId: device._id, 
+                       location: {
+                         ...data,
+                         timestamp: data.timestamp || new Date().toISOString()
+                       }
+                     });
+                   } else {
+                     console.log(`LOCATION_DEBUG [Socket] Location update for device ${device._id} failed: Child not found`);
                    }
+                } else {
+                   console.log(`LOCATION_DEBUG [Socket] Location update failed: Device not found`);
                 }
+            } else {
+                console.log(`LOCATION_DEBUG [Socket] Location update failed: Invalid coordinates lat=${data.latitude} lng=${data.longitude}`);
             }
+        } else {
+            console.log(`LOCATION_DEBUG [Socket] Location update failed: Missing coordinates`);
         }
       }
     });
@@ -310,6 +327,96 @@ export const setupSockets = (io: Server) => {
        } else if (socket.user?.role === 'parent' && deviceId) {
           io.to(`device_${deviceId}`).emit('chat:message:delivered', { messageId, conversationId });
        }
+    });
+
+    // Content Safety Monitoring Events
+    socket.on('notification:received', async (data) => {
+      if (socket.user?.role === 'device') {
+        const device = await Device.findById(socket.user.deviceId);
+        if (device) {
+           const child = await Child.findById(device.childId);
+           if (child) {
+             const { packageName, title, text, timestamp } = data;
+             
+             // Run text analysis
+             if (text) {
+               await SafetyAnalyzerService.analyzeText(
+                 text, 
+                 packageName, 
+                 child.parentId.toString(), 
+                 child._id.toString(), 
+                 device._id.toString(),
+                 { title, timestamp }
+               );
+             }
+           }
+        }
+      }
+    });
+
+    socket.on('screen:session:started', async () => {
+      if (socket.user?.role === 'device') {
+        const device = await Device.findById(socket.user.deviceId);
+        if (device) {
+           const child = await Child.findById(device.childId);
+           if (child) {
+             io.to(`parent_${child.parentId}`).emit('screen:session:started', { deviceId: device._id });
+           }
+        }
+      }
+    });
+
+    socket.on('screen:session:stopped', async () => {
+      if (socket.user?.role === 'device') {
+        const device = await Device.findById(socket.user.deviceId);
+        if (device) {
+           const child = await Child.findById(device.childId);
+           if (child) {
+             io.to(`parent_${child.parentId}`).emit('screen:session:stopped', { deviceId: device._id });
+           }
+        }
+      }
+    });
+
+    socket.on('screen:session:request', async (data) => {
+      if (socket.user?.role === 'parent') {
+         const { deviceId } = data;
+         io.to(`device_${deviceId}`).emit('screen:session:request', { parentId: socket.user.parentId });
+      }
+    });
+
+    socket.on('screen:session:stop', async (data) => {
+      if (socket.user?.role === 'parent') {
+         const { deviceId } = data;
+         io.to(`device_${deviceId}`).emit('screen:session:stop', { parentId: socket.user.parentId });
+      }
+    });
+
+    socket.on('screen:frame', async (data) => {
+      if (socket.user?.role === 'device') {
+        const device = await Device.findById(socket.user.deviceId);
+        if (device) {
+           const child = await Child.findById(device.childId);
+           if (child) {
+             // Route live frame directly to parent
+             io.to(`parent_${child.parentId}`).emit('screen:frame', { 
+               deviceId: device._id, 
+               image: data.image,
+               timestamp: data.timestamp
+             });
+             
+             // Analyze frame
+             if (data.image) {
+               await SafetyAnalyzerService.analyzeImageFrame(
+                 data.image,
+                 child.parentId.toString(),
+                 child._id.toString(),
+                 device._id.toString()
+               );
+             }
+           }
+        }
+      }
     });
   });
 };

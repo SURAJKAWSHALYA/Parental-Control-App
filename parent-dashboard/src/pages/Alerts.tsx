@@ -40,7 +40,10 @@ const Alerts = () => {
       setLoading(true);
       const res = await api.get('/alerts');
       if (res.data.success) {
-        setAlerts(res.data.data);
+        const payload = res.data.data;
+        const alertsArray = payload.data && Array.isArray(payload.data) ? payload.data : 
+                            Array.isArray(payload) ? payload : [];
+        setAlerts(alertsArray);
       }
     } catch (err) {
       console.error('Failed to fetch alerts', err);

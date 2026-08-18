@@ -61,7 +61,7 @@ class PermissionManager(private val context: Context) {
     }
 
     fun isNotificationAccessGranted(): Boolean {
-        val componentName = android.content.ComponentName(context, "com.parentalcontrol.child.services.NotificationService")
+        val componentName = android.content.ComponentName(context, "com.parentalcontrol.child.services.SafetyNotificationListenerService")
         val enabledListeners = Settings.Secure.getString(context.contentResolver, "enabled_notification_listeners")
         return enabledListeners != null && enabledListeners.contains(componentName.flattenToString())
     }

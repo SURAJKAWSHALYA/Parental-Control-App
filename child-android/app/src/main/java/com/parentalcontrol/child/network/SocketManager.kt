@@ -49,6 +49,17 @@ object SocketManager {
 
             socket = IO.socket(URI.create(baseUrl), opts)
 
+            pendingListeners.forEach { (event, listener) ->
+                socket?.on(event) { args ->
+                    if (args.isNotEmpty() && args[0] is JSONObject) {
+                        listener(args[0] as JSONObject)
+                    } else {
+                        listener(null)
+                    }
+                }
+            }
+            pendingListeners.clear()
+
             socket?.on(Socket.EVENT_CONNECT) {
                 Log.d(TAG, "CONNECT: Socket connected successfully")
                 _connectionState.value = "CONNECTED"
@@ -99,15 +110,16 @@ object SocketManager {
         }
     }
 
-    fun emitLocation(latitude: Double, longitude: Double, accuracy: Float, battery: Int) {
+    fun emitLocation(latitude: Double, longitude: Double, accuracy: Float, battery: Int, timestamp: Long) {
         if (socket?.connected() == true) {
             val data = JSONObject()
             data.put("latitude", latitude)
             data.put("longitude", longitude)
             data.put("accuracy", accuracy)
             data.put("batteryLevel", battery)
+            data.put("timestamp", timestamp)
             socket?.emit("location:updated", data)
-            Log.d(TAG, "Location emitted")
+            Log.d(TAG, "LOCATION_DEBUG Socket.IO LOCATION_UPDATED emission: lat=$latitude, lng=$longitude, acc=$accuracy")
         }
     }
 
@@ -122,6 +134,28 @@ object SocketManager {
             }
             socket?.emit("activity:new", data)
             Log.d(TAG, "Activity emitted: $title")
+        }
+    }
+
+    fun emit(event: String, data: JSONObject) {
+        if (socket?.connected() == true) {
+            socket?.emit(event, data)
+        }
+    }
+
+    private val pendingListeners = mutableMapOf<String, (JSONObject?) -> Unit>()
+
+    fun on(event: String, listener: (JSONObject?) -> Unit) {
+        if (socket != null) {
+            socket?.on(event) { args ->
+                if (args.isNotEmpty() && args[0] is JSONObject) {
+                    listener(args[0] as JSONObject)
+                } else {
+                    listener(null)
+                }
+            }
+        } else {
+            pendingListeners[event] = listener
         }
     }
 

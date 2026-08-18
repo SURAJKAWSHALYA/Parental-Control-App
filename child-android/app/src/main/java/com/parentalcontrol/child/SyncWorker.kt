@@ -76,7 +76,9 @@ class SyncWorker(
                         }
                     )
                     
+                    android.util.Log.d("SyncWorker", "LOCATION_DEBUG Backend location upload: Starting API sync for ${pendingLocations.size} records")
                     val success = com.parentalcontrol.child.network.ApiClient.syncLocation(token, requestData)
+                    android.util.Log.d("SyncWorker", "LOCATION_DEBUG Backend location upload HTTP status/error: success=$success")
                     if (success) {
                         val idsToRemove = pendingLocations.map { it.id }
                         locationDao.deleteLocations(idsToRemove)

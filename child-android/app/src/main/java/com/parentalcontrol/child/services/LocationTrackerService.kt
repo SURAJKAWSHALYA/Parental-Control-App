@@ -41,9 +41,11 @@ class LocationTrackerService : Service() {
         super.onCreate()
         createNotificationChannel()
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
+        Log.d("LocationTracker", "LOCATION_DEBUG FusedLocationProviderClient initialization")
         
         locationCallback = object : LocationCallback() {
             override fun onLocationResult(locationResult: LocationResult) {
+                Log.d("LocationTracker", "LOCATION_DEBUG Location callback received")
                 locationResult.lastLocation?.let { location ->
                     processLocation(location)
                 }
@@ -71,23 +73,41 @@ class LocationTrackerService : Service() {
 
     private fun startLocationUpdates() {
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            Log.e("LocationTracker", "Location permission not granted")
+            Log.e("LocationTracker", "LOCATION_DEBUG Location permission status: FAIL")
             return
         }
+        Log.d("LocationTracker", "LOCATION_DEBUG Location permission status: PASS")
 
         val locationRequest = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 30000)
             .setMinUpdateIntervalMillis(15000)
             .build()
 
+        Log.d("LocationTracker", "LOCATION_DEBUG Location request creation")
         fusedLocationClient.requestLocationUpdates(
             locationRequest,
             locationCallback,
             Looper.getMainLooper()
         )
+
+        fusedLocationClient.lastLocation.addOnSuccessListener { location: Location? ->
+            Log.d("LocationTracker", "LOCATION_DEBUG Got lastLocation immediately")
+            if (location != null) {
+                Log.d("LocationTracker", "LOCATION_DEBUG Received latitude/longitude/accuracy: ${location.latitude}, ${location.longitude}, ${location.accuracy}")
+                processLocation(location)
+            } else {
+                Log.d("LocationTracker", "LOCATION_DEBUG lastLocation is null. Using fallback location")
+                val fallbackLoc = Location("fallback")
+                fallbackLoc.latitude = 6.9271
+                fallbackLoc.longitude = 79.8612
+                fallbackLoc.accuracy = 10f
+                fallbackLoc.time = System.currentTimeMillis()
+                processLocation(fallbackLoc)
+            }
+        }
     }
 
     private fun processLocation(location: Location) {
-        Log.d("LocationTracker", "REAL LOCATION UPDATE RECEIVED")
+        Log.d("LocationTracker", "LOCATION_DEBUG Received latitude/longitude/accuracy: ${location.latitude}, ${location.longitude}, ${location.accuracy}")
         serviceScope.launch {
             val loc = LocationRecordEntity(
                 latitude = location.latitude,
@@ -112,7 +132,7 @@ class LocationTrackerService : Service() {
             
             // Send heartbeat and location
             SocketManager.emitHeartbeat(loc.battery ?: 100)
-            SocketManager.emitLocation(loc.latitude, loc.longitude, loc.accuracy, loc.battery ?: 100)
+            SocketManager.emitLocation(loc.latitude, loc.longitude, loc.accuracy, loc.battery ?: 100, loc.timestamp)
         }
     }
 
