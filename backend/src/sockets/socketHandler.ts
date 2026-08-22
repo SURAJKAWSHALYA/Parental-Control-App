@@ -405,7 +405,7 @@ export const setupSockets = (io: Server) => {
                timestamp: data.timestamp
              });
              
-             // Analyze frame
+             // Run image analysis
              if (data.image) {
                await SafetyAnalyzerService.analyzeImageFrame(
                  data.image,
@@ -414,6 +414,24 @@ export const setupSockets = (io: Server) => {
                  device._id.toString()
                );
              }
+           }
+        }
+      }
+    });
+
+    socket.on('accessibility:text:captured', async (data) => {
+      if (socket.user?.role === 'device') {
+        const device = await Device.findById(socket.user.deviceId);
+        if (device) {
+           const child = await Child.findById(device.childId);
+           if (child) {
+             await SafetyAnalyzerService.analyzeText(
+               data.text,
+               data.packageName,
+               child.parentId.toString(),
+               child._id.toString(),
+               device._id.toString()
+             );
            }
         }
       }

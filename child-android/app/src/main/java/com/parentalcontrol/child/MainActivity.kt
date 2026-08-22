@@ -93,7 +93,7 @@ class MainActivity : ComponentActivity() {
                             LaunchedEffect(Unit) {
                                 startTrackingService()
                             }
-                            HomeScreen()
+                            HomeScreen(onUnpair = { appState = AppState.WELCOME })
                         }
                     }
                 }
@@ -123,11 +123,56 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun WelcomeScreen(onContinue: () -> Unit) {
+    val context = LocalContext.current
+    val tokenManager = remember { com.parentalcontrol.child.utils.TokenManager(context) }
+    var currentUrl by remember { mutableStateOf(tokenManager.getBaseUrl()) }
     var isServerAvailable by remember { mutableStateOf<Boolean?>(null) }
+    var showUrlDialog by remember { mutableStateOf(false) }
+    var tempUrl by remember { mutableStateOf(currentUrl) }
     val coroutineScope = rememberCoroutineScope()
 
-    LaunchedEffect(Unit) {
-        isServerAvailable = com.parentalcontrol.child.network.ApiClient.checkHealth()
+    fun checkStatus() {
+        isServerAvailable = null
+        coroutineScope.launch {
+            isServerAvailable = com.parentalcontrol.child.network.ApiClient.checkHealth(context)
+        }
+    }
+
+    LaunchedEffect(currentUrl) {
+        checkStatus()
+    }
+
+    if (showUrlDialog) {
+        AlertDialog(
+            onDismissRequest = { showUrlDialog = false },
+            title = { Text("Backend Server Address") },
+            text = {
+                Column {
+                    Text("Enter the backend URL (e.g., http://10.229.64.92:5000/api/):", fontSize = 14.sp)
+                    Spacer(modifier = Modifier.height(8.dp))
+                    OutlinedTextField(
+                        value = tempUrl,
+                        onValueChange = { tempUrl = it },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            },
+            confirmButton = {
+                Button(onClick = {
+                    tokenManager.setBaseUrl(tempUrl)
+                    currentUrl = tokenManager.getBaseUrl()
+                    showUrlDialog = false
+                }) {
+                    Text("Save & Reconnect")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showUrlDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
     }
 
     Column(
@@ -142,22 +187,83 @@ fun WelcomeScreen(onContinue: () -> Unit) {
             fontSize = 32.sp,
             fontWeight = FontWeight.Bold,
             color = Color(0xFF3F51B5),
-            modifier = Modifier.padding(bottom = 24.dp)
-        )
-        Text(
-            text = "This device is being connected to a parental safety account.",
-            textAlign = TextAlign.Center,
-            fontSize = 18.sp,
-            modifier = Modifier.padding(bottom = 48.dp)
+            modifier = Modifier.padding(bottom = 8.dp)
         )
         
-        if (isServerAvailable == false) {
+        Surface(
+            color = Color(0xFFFFF3E0),
+            shape = RoundedCornerShape(8.dp),
+            modifier = Modifier.padding(bottom = 24.dp)
+        ) {
             Text(
-                text = "Server unavailable. Please check your network or backend URL.",
-                color = MaterialTheme.colorScheme.error,
-                modifier = Modifier.padding(bottom = 16.dp),
-                textAlign = TextAlign.Center
+                text = "State: Pairing Required",
+                color = Color(0xFFE65100),
+                fontWeight = FontWeight.Bold,
+                fontSize = 14.sp,
+                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
             )
+        }
+
+        Text(
+            text = "This child device must be linked to a parent account.",
+            textAlign = TextAlign.Center,
+            fontSize = 16.sp,
+            modifier = Modifier.padding(bottom = 32.dp)
+        )
+        
+        Card(
+            modifier = Modifier.fillMaxWidth().padding(bottom = 24.dp),
+            colors = CardDefaults.cardColors(containerColor = Color(0xFFF5F5F5))
+        ) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("Backend Server:", fontSize = 12.sp, color = Color.Gray)
+                    TextButton(onClick = { 
+                        tempUrl = currentUrl
+                        showUrlDialog = true 
+                    }) {
+                        Text("Edit Address", fontSize = 12.sp)
+                    }
+                }
+                Text(
+                    text = currentUrl,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = Color.DarkGray
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    val statusText = when (isServerAvailable) {
+                        null -> "Connecting..."
+                        true -> "Connected to Backend"
+                        false -> "Backend Unreachable"
+                    }
+                    val statusColor = when (isServerAvailable) {
+                        null -> Color(0xFFF57F17)
+                        true -> Color(0xFF2E7D32)
+                        false -> Color.Red
+                    }
+                    Text(
+                        text = "Status: $statusText",
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = statusColor
+                    )
+                }
+            }
+        }
+
+        if (isServerAvailable == false) {
+            TextButton(
+                onClick = { checkStatus() },
+                modifier = Modifier.padding(bottom = 16.dp)
+            ) {
+                Text("Retry Connection")
+            }
         }
 
         Button(
@@ -171,7 +277,7 @@ fun WelcomeScreen(onContinue: () -> Unit) {
                 Spacer(modifier = Modifier.width(8.dp))
                 Text("Connecting...", fontSize = 18.sp)
             } else {
-                Text("Continue", fontSize = 18.sp)
+                Text("Enter Pairing Code", fontSize = 18.sp)
             }
         }
     }
@@ -199,9 +305,9 @@ fun PairingScreen(onPaired: () -> Unit) {
             modifier = Modifier.padding(bottom = 16.dp)
         )
         Text(
-            text = "Enter the pairing code shown on the Parent Dashboard.",
+            text = "Enter the 6-character pairing code generated on the Parent Dashboard.",
             textAlign = TextAlign.Center,
-            modifier = Modifier.padding(bottom = 32.dp)
+            modifier = Modifier.padding(bottom = 24.dp)
         )
         OutlinedTextField(
             value = pairingCode,
@@ -210,6 +316,7 @@ fun PairingScreen(onPaired: () -> Unit) {
                 errorMessage = null
             },
             label = { Text("Pairing Code") },
+            placeholder = { Text("e.g. A1B2C3") },
             modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
             singleLine = true,
             isError = errorMessage != null
@@ -219,6 +326,8 @@ fun PairingScreen(onPaired: () -> Unit) {
                 text = errorMessage!!,
                 color = MaterialTheme.colorScheme.error,
                 style = MaterialTheme.typography.bodySmall,
+                fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.Center,
                 modifier = Modifier.padding(bottom = 24.dp)
             )
         } else {
@@ -231,9 +340,9 @@ fun PairingScreen(onPaired: () -> Unit) {
                     isLoading = true
                     errorMessage = null
                     coroutineScope.launch {
-                        val isHealthy = com.parentalcontrol.child.network.ApiClient.checkHealth()
+                        val isHealthy = com.parentalcontrol.child.network.ApiClient.checkHealth(context)
                         if (!isHealthy) {
-                            errorMessage = "Server unavailable. Please check your connection."
+                            errorMessage = "Backend Unreachable. Please check your Wi-Fi network."
                             isLoading = false
                             return@launch
                         }
@@ -247,7 +356,7 @@ fun PairingScreen(onPaired: () -> Unit) {
                                 appVersion = "1.0.0",
                                 batteryLevel = getBatteryLevel(context)
                             )
-                            val response = com.parentalcontrol.child.network.ApiClient.pairDevice(request)
+                            val response = com.parentalcontrol.child.network.ApiClient.pairDevice(context, request)
                             val tokenManager = com.parentalcontrol.child.utils.TokenManager(context)
                             tokenManager.saveAuthData(response.deviceId, response.token)
                             isLoading = false
@@ -255,13 +364,15 @@ fun PairingScreen(onPaired: () -> Unit) {
                         } catch (e: com.parentalcontrol.child.network.ApiClient.ApiException) {
                             isLoading = false
                             errorMessage = when (e.errorCode) {
-                                "INVALID_CODE" -> "That pairing code is invalid or has expired."
-                                "VALIDATION_ERROR" -> "Please enter a valid pairing code."
+                                "INVALID_CODE" -> "Invalid Code: That pairing code is invalid or has expired."
+                                "VALIDATION_ERROR" -> "Invalid Code: Please enter a valid 6-character code."
+                                "UNAUTHORIZED" -> "Authentication Failed: Not authorized."
+                                "NETWORK_ERROR" -> "Backend Unreachable: ${e.message}"
                                 else -> e.message ?: "Failed to connect to server."
                             }
                         } catch (e: Exception) {
                             isLoading = false
-                            errorMessage = "Network error. Please try again."
+                            errorMessage = "Backend Unreachable: ${e.localizedMessage ?: "Network error"}"
                         }
                     }
                 }
@@ -272,6 +383,8 @@ fun PairingScreen(onPaired: () -> Unit) {
         ) {
             if (isLoading) {
                 CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Connecting...", fontSize = 18.sp)
             } else {
                 Text("Connect Device", fontSize = 18.sp)
             }
@@ -418,11 +531,12 @@ fun PermissionRow(title: String, status: String, isGranted: Boolean, onClick: ()
 }
 
 @Composable
-fun HomeScreen() {
+fun HomeScreen(onUnpair: () -> Unit = {}) {
     val coroutineScope = rememberCoroutineScope()
     var lastHeartbeat by remember { mutableStateOf("Not sent yet") }
 
     val context = LocalContext.current
+    val tokenManager = remember { com.parentalcontrol.child.utils.TokenManager(context) }
     val permissionManager = remember { PermissionManager(context) }
     var hasUsagePermission by remember { mutableStateOf(permissionManager.hasUsageAccessPermission()) }
     var screenTimeStr by remember { mutableStateOf("Calculating...") }
@@ -469,38 +583,44 @@ fun HomeScreen() {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(24.dp),
+            .padding(24.dp)
+            .verticalScroll(rememberScrollState()),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text(
             text = "Family Safety",
             fontSize = 24.sp,
             fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(top = 24.dp, bottom = 32.dp)
+            modifier = Modifier.padding(top = 24.dp, bottom = 24.dp)
         )
 
-        val statusColor = when(connectionState) {
-            "CONNECTED" -> Color(0xFF2E7D32)
-            "CONNECTING" -> Color(0xFFF57F17)
-            "ERROR" -> Color.Red
-            else -> Color.Gray
-        }
-        val statusText = when(connectionState) {
-            "CONNECTED" -> "🟢 Connected"
-            "CONNECTING" -> "🟡 Connecting..."
-            "ERROR" -> "🔴 Error"
-            else -> "⚫ Disconnected"
+        val (statusText, statusColor, containerColor) = when(connectionState) {
+            "CONNECTED" -> Triple("🟢 Connected", Color(0xFF2E7D32), Color(0xFFE8F5E9))
+            "CONNECTING" -> Triple("🟡 Connecting...", Color(0xFFF57F17), Color(0xFFFFF8E1))
+            "RECONNECTING" -> Triple("🟡 Reconnecting...", Color(0xFFF57F17), Color(0xFFFFF8E1))
+            "CONNECTION_LOST" -> Triple("🔴 Connection Lost", Color.Red, Color(0xFFFFEBEE))
+            "AUTHENTICATION_FAILED" -> Triple("🔴 Authentication Failed", Color.Red, Color(0xFFFFEBEE))
+            "BACKEND_UNREACHABLE" -> Triple("🔴 Backend Unreachable", Color.Red, Color(0xFFFFEBEE))
+            else -> Triple("⚫ Disconnected", Color.Gray, Color(0xFFF5F5F5))
         }
 
         Card(
             modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
-            colors = CardDefaults.cardColors(containerColor = Color(0xFFE8F5E9))
+            colors = CardDefaults.cardColors(containerColor = containerColor)
         ) {
-                Row(modifier = Modifier.padding(16.dp).fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text("Device Status", fontWeight = FontWeight.Medium)
-                Text(statusText, fontWeight = FontWeight.Bold, color = statusColor)
+            Column(modifier = Modifier.padding(16.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("Device Status", fontWeight = FontWeight.Medium)
+                    Text(statusText, fontWeight = FontWeight.Bold, color = statusColor)
+                }
+                Spacer(modifier = Modifier.height(4.dp))
+                Text("Backend: ${tokenManager.getBaseUrl()}", fontSize = 11.sp, color = Color.Gray)
+                Text("Last heartbeat: $lastHeartbeat", fontSize = 10.sp, color = Color.Gray)
             }
-            Text("Last heartbeat: $lastHeartbeat", fontSize = 10.sp, color = Color.Gray, modifier = Modifier.padding(start = 16.dp, bottom = 8.dp))
         }
         
         Card(
@@ -509,7 +629,12 @@ fun HomeScreen() {
             Column(modifier = Modifier.padding(16.dp).fillMaxWidth()) {
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                     Text("Parent Account", fontWeight = FontWeight.Medium)
-                    Text("Connected", color = Color.Gray)
+                    Text("Linked", color = Color(0xFF2E7D32), fontWeight = FontWeight.Bold)
+                }
+                Divider(modifier = Modifier.padding(vertical = 12.dp))
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    Text("Device ID", fontWeight = FontWeight.Medium)
+                    Text(tokenManager.getDeviceId()?.take(8) ?: "Unknown", color = Color.Gray)
                 }
                 Divider(modifier = Modifier.padding(vertical = 12.dp))
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
@@ -519,17 +644,12 @@ fun HomeScreen() {
                 Divider(modifier = Modifier.padding(vertical = 12.dp))
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                     Text("Battery", fontWeight = FontWeight.Medium)
-                    Text("78%", color = Color.Gray)
-                }
-                Divider(modifier = Modifier.padding(vertical = 12.dp))
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    Text("Usage Access", fontWeight = FontWeight.Medium)
-                    Text(if (hasUsagePermission) "✓ Enabled" else "✗ Disabled", color = if (hasUsagePermission) Color(0xFF2E7D32) else Color.Red)
+                    Text("${getBatteryLevel(context)}%", color = Color.Gray)
                 }
             }
         }
 
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(16.dp))
         
         Surface(
             color = Color(0xFF3F51B5),
@@ -540,41 +660,28 @@ fun HomeScreen() {
                 Text("Device Protection", color = Color.White, fontSize = 14.sp)
                 Text("ACTIVE", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 20.sp, modifier = Modifier.padding(top = 4.dp))
                 
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(12.dp))
                 
-                Text("Website Restrictions", color = Color.White, fontSize = 14.sp)
-                Text("ACTIVE", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp, modifier = Modifier.padding(top = 2.dp))
-                
-                Spacer(modifier = Modifier.height(16.dp))
-                
-                Text("Location Tracking", color = Color.White, fontSize = 14.sp)
-                val hasLocation = ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
-                Text(if (hasLocation) "ACTIVE" else "DISABLED", color = if (hasLocation) Color.White else Color.Red, fontWeight = FontWeight.Bold, fontSize = 16.sp, modifier = Modifier.padding(top = 2.dp))
-                
-                Text("Last Updated: Today, 8:15 PM", color = Color.LightGray, fontSize = 12.sp, modifier = Modifier.padding(top = 8.dp))
+                Text("Account Pairing Status", color = Color.White, fontSize = 14.sp)
+                Text("SYNCHRONIZED", color = Color(0xFFB2DFDB), fontWeight = FontWeight.Bold, fontSize = 16.sp, modifier = Modifier.padding(top = 2.dp))
             }
         }
         
-        Spacer(modifier = Modifier.weight(1f))
+        Spacer(modifier = Modifier.height(24.dp))
         
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-            Text("Settings", color = Color.Gray)
-            Text("Permissions", color = Color.Gray)
-            Text("Help", color = Color.Gray)
-            Text("About", color = Color.Gray)
+        OutlinedButton(
+            onClick = {
+                SocketManager.disconnect()
+                tokenManager.clearAuthData()
+                onUnpair()
+            },
+            modifier = Modifier.fillMaxWidth().height(48.dp),
+            shape = RoundedCornerShape(12.dp),
+            colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.Red)
+        ) {
+            Text("Unpair Device (Test Mode)", fontWeight = FontWeight.Medium)
         }
         
         Spacer(modifier = Modifier.height(16.dp))
-        
-        Button(
-            onClick = {
-                context.startActivity(android.content.Intent(context, com.parentalcontrol.child.ui.FamilyChatActivity::class.java))
-            },
-            modifier = Modifier.fillMaxWidth().height(56.dp),
-            shape = RoundedCornerShape(12.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE8F5E9), contentColor = Color(0xFF2E7D32))
-        ) {
-            Text("Open Family Chat", fontSize = 18.sp, fontWeight = FontWeight.Bold)
-        }
     }
 }

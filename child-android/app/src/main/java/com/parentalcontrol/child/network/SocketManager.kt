@@ -31,8 +31,10 @@ object SocketManager {
         }
 
         try {
+            val tokenManager = TokenManager(context)
+            val fullUrl = tokenManager.getBaseUrl()
             // The BASE_URL ends with /api/, so we strip it to get the socket host
-            val baseUrl = BuildConfig.BASE_URL.replace("/api/", "")
+            val baseUrl = fullUrl.replace("/api/", "").trimEnd('/')
             
             val opts = IO.Options()
             opts.reconnection = true
@@ -68,13 +70,27 @@ object SocketManager {
             socket?.on(Socket.EVENT_DISCONNECT) { args ->
                 val reason = if (args.isNotEmpty()) args[0].toString() else "Unknown"
                 Log.w(TAG, "DISCONNECT: Socket disconnected. Reason: $reason")
-                _connectionState.value = "DISCONNECTED"
+                _connectionState.value = "CONNECTION_LOST"
             }
 
             socket?.on(Socket.EVENT_CONNECT_ERROR) { args ->
                 val error = if (args.isNotEmpty()) args[0].toString() else "Unknown"
                 Log.e(TAG, "EVENT FAILURE: Socket connection error: $error")
-                _connectionState.value = "ERROR"
+                if (error.contains("Authentication", ignoreCase = true) || error.contains("token", ignoreCase = true)) {
+                    _connectionState.value = "AUTHENTICATION_FAILED"
+                } else {
+                    _connectionState.value = "BACKEND_UNREACHABLE"
+                }
+            }
+
+            socket?.io()?.on(io.socket.client.Manager.EVENT_RECONNECT_ATTEMPT) {
+                Log.d(TAG, "RECONNECTING: Reconnect attempt")
+                _connectionState.value = "RECONNECTING"
+            }
+
+            socket?.io()?.on(io.socket.client.Manager.EVENT_RECONNECT) {
+                Log.d(TAG, "RECONNECTED: Successfully reconnected")
+                _connectionState.value = "CONNECTED"
             }
 
             // Backend commands and configuration updates

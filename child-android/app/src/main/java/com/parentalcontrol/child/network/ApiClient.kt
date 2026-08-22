@@ -50,9 +50,17 @@ object ApiClient {
 
     class ApiException(message: String, val errorCode: String? = null) : Exception(message)
 
-    suspend fun pairDevice(requestData: PairingRequest): PairingResponseData {
+    fun getBaseUrl(context: android.content.Context? = null): String {
+        return if (context != null) {
+            com.parentalcontrol.child.utils.TokenManager(context).getBaseUrl()
+        } else {
+            BuildConfig.BASE_URL
+        }
+    }
+
+    suspend fun pairDevice(context: android.content.Context, requestData: PairingRequest): PairingResponseData {
         return withContext(Dispatchers.IO) {
-            val url = "${BuildConfig.BASE_URL}pairing/connect"
+            val url = "${getBaseUrl(context)}pairing/connect"
             val jsonBody = gson.toJson(requestData)
             val body = jsonBody.toRequestBody(JSON)
 
@@ -61,7 +69,11 @@ object ApiClient {
                 .post(body)
                 .build()
 
-            val response = client.newCall(request).execute()
+            val response = try {
+                client.newCall(request).execute()
+            } catch (e: Exception) {
+                throw ApiException("Backend Unreachable: ${e.localizedMessage ?: "Could not connect to server"}", "NETWORK_ERROR")
+            }
             val responseBody = response.body?.string()
 
             if (response.isSuccessful && responseBody != null) {
@@ -78,16 +90,17 @@ object ApiClient {
                         throw ApiException(errorResponse.message, errorResponse.error_code)
                     } catch (e: Exception) {
                         if (e is ApiException) throw e
-                        throw ApiException("HTTP ${response.code}")
+                        throw ApiException("HTTP ${response.code}", "HTTP_${response.code}")
                     }
                 }
-                throw ApiException("Unknown network error")
+                throw ApiException("Backend Unreachable", "NETWORK_ERROR")
             }
         }
     }
-    suspend fun checkHealth(): Boolean {
+
+    suspend fun checkHealth(context: android.content.Context? = null): Boolean {
         return withContext(Dispatchers.IO) {
-            val url = "${BuildConfig.BASE_URL}health/ping"
+            val url = "${getBaseUrl(context)}health/ping"
             val request = Request.Builder().url(url).build()
             try {
                 val response = client.newCall(request).execute()

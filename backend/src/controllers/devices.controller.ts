@@ -11,7 +11,7 @@ export const getDevices = async (req: AuthRequest, res: Response) => {
     const childIds = children.map(c => c._id);
 
     // Find all devices associated with those children
-    const devices = await Device.find({ childId: { $in: childIds } });
+    const devices = await Device.find({ childId: { $in: childIds } }).populate('childId', 'name');
     sendSuccess(res, devices, 'Devices fetched successfully');
   } catch (error: any) {
     sendError(res, error.message);

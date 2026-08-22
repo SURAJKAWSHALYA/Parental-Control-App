@@ -39,7 +39,7 @@ android {
         debug {
             applicationIdSuffix ".debug"
             debuggable true
-            buildConfigField "String", "BASE_URL", "\"${System.getenv('API_BASE_URL') ?: 'http://192.168.155.92:5000/api/'}\""
+            buildConfigField "String", "BASE_URL", "\"${System.getenv('API_BASE_URL') ?: 'http://10.229.64.92:5000/api/'}\""
         }
     }
     compileOptions {

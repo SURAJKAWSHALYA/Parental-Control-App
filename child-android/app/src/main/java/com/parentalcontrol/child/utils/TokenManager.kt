@@ -42,7 +42,23 @@ class TokenManager(context: Context) {
         return !getDeviceId().isNullOrEmpty() && !getToken().isNullOrEmpty()
     }
 
+    fun getBaseUrl(): String {
+        return sharedPreferences.getString("BACKEND_URL", null) ?: com.parentalcontrol.child.BuildConfig.BASE_URL
+    }
+
+    fun setBaseUrl(url: String) {
+        var formatted = url.trim()
+        if (!formatted.startsWith("http://") && !formatted.startsWith("https://")) {
+            formatted = "http://$formatted"
+        }
+        if (!formatted.endsWith("/")) {
+            formatted = "$formatted/"
+        }
+        val finalUrl = if (formatted.endsWith("/api/")) formatted else "${formatted}api/"
+        sharedPreferences.edit().putString("BACKEND_URL", finalUrl).apply()
+    }
+
     fun clearAuthData() {
-        sharedPreferences.edit().clear().apply()
+        sharedPreferences.edit().remove("DEVICE_ID").remove("DEVICE_TOKEN").apply()
     }
 }
